@@ -6,266 +6,465 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Carona Solidária</title>
 <meta name="description" content="Vizinhos com carro levando vizinhos com dificuldade de locomoção até o local de votação. Gratuito e apartidário.">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
   :root {
     --bg: #f6f4ef;
     --surface: #ffffff;
-    --text: #1c1c1c;
-    --muted: #5a5a5a;
-    --line: #d9d4c9;
-    --primary: #262626;
+    --text: #1a1a1a;
+    --muted: #4a4a4a;
+    --line: #cfc8ba;
+    --primary: #222222;
     --primary-text: #ffffff;
-    --ok-bg: #e8f1e8;
-    --ok-line: #9cc29c;
-    --warn-bg: #fff4dc;
-    --warn-line: #e3c27a;
-    --err-bg: #fbe7e5;
-    --err-line: #df9a92;
-    --radius: 12px;
+    --sel-bg: #efe9dc;
+    --foco: #1d5fd1;
+    --ok-bg: #e6f2e6;
+    --ok-line: #7fb57f;
+    --warn-bg: #fff3d6;
+    --warn-line: #d9b45f;
+    --err-bg: #fbe5e2;
+    --err-line: #d98a80;
+    --pedido: #c2410c;
+    --motorista: #1d4ed8;
+    --combinado: #3f7d3f;
+    --radius: 14px;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #161616;
-      --surface: #212121;
-      --text: #f1f1f1;
-      --muted: #b3b3b3;
-      --line: #3a3a3a;
-      --primary: #f1f1f1;
-      --primary-text: #161616;
-      --ok-bg: #1f2e1f;
-      --ok-line: #4b744b;
+      --bg: #151515;
+      --surface: #202020;
+      --text: #f3f3f3;
+      --muted: #c4c4c4;
+      --line: #444444;
+      --primary: #f3f3f3;
+      --primary-text: #151515;
+      --sel-bg: #2d2a24;
+      --foco: #7fb0ff;
+      --ok-bg: #1d2e1d;
+      --ok-line: #4f8a4f;
       --warn-bg: #33291a;
       --warn-line: #8a6d32;
       --err-bg: #3a2220;
-      --err-line: #8e4a43;
+      --err-line: #a0544b;
     }
   }
   * { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; }
+  html { -webkit-text-size-adjust: 100%; font-size: 20px; }
   body {
     margin: 0;
     background: var(--bg);
     color: var(--text);
-    font: 18px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font: 1rem/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
-  main { max-width: 640px; margin: 0 auto; padding: 24px 16px 48px; }
-  h1 { font-size: 1.75rem; line-height: 1.2; margin: 0 0 4px; }
-  h2 { font-size: 1.35rem; margin: 0 0 12px; }
+  main { max-width: 640px; margin: 0 auto; padding: 0 16px 48px; }
+  h1 { font-size: 1.6rem; line-height: 1.2; margin: 8px 0 12px; }
+  h2 { font-size: 1.4rem; line-height: 1.25; margin: 0 0 12px; }
+  h2:focus { outline: none; }
   h3 { font-size: 1.1rem; margin: 0 0 8px; }
-  p { margin: 0 0 12px; }
-  .data { color: var(--muted); margin-bottom: 16px; }
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 20px 16px;
-    margin-bottom: 16px;
+  p { margin: 0 0 14px; }
+  a { color: inherit; }
+  :focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
+
+  /* topo */
+  .topo { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0 6px; }
+  .marca { font-weight: 800; font-size: 1.1rem; text-decoration: none; }
+  .fonte { display: flex; gap: 6px; }
+  .fonte button {
+    min-width: 52px; min-height: 48px; border: 2px solid var(--line); border-radius: 10px;
+    background: var(--surface); color: var(--text); font: inherit; font-weight: 700; cursor: pointer;
   }
-  .escolha { display: grid; gap: 12px; margin: 20px 0; }
+  .data { color: var(--muted); font-size: 0.9rem; margin: 0 0 16px; }
+
+  /* botões */
   .btn {
-    display: block;
-    width: 100%;
-    padding: 16px;
-    border: 2px solid var(--primary);
-    border-radius: var(--radius);
-    background: var(--primary);
-    color: var(--primary-text);
-    font: inherit;
-    font-weight: 600;
-    text-align: center;
-    text-decoration: none;
-    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; min-height: 60px; padding: 14px 18px;
+    border: 2px solid var(--primary); border-radius: var(--radius);
+    background: var(--primary); color: var(--primary-text);
+    font: inherit; font-weight: 700; text-align: center; text-decoration: none; cursor: pointer;
   }
-  .btn.sec { background: transparent; color: var(--text); }
-  .btn.peq { display: inline-block; width: auto; padding: 8px 14px; font-size: 0.95rem; }
-  .btn:disabled { opacity: 0.5; cursor: wait; }
-  .grande { font-size: 1.2rem; padding: 20px 16px; }
-  .voltar { display: inline-block; margin-bottom: 16px; color: var(--text); }
-  fieldset { border: 0; padding: 0; margin: 0 0 20px; }
-  legend { font-weight: 700; font-size: 1.1rem; margin-bottom: 8px; padding: 0; }
-  label { display: block; margin: 12px 0 4px; font-weight: 600; }
-  .dica { display: block; font-weight: 400; color: var(--muted); font-size: 0.9rem; }
-  input[type=text], input[type=tel], input[type=password], textarea {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: var(--bg);
-    color: var(--text);
-    font: inherit;
+  .btn.sec { background: var(--surface); color: var(--text); }
+  .btn.peq { width: auto; min-height: 48px; padding: 8px 16px; font-size: 0.9rem; }
+  .btn:disabled { opacity: 0.55; cursor: wait; }
+  .btn-grande {
+    display: flex; align-items: center; gap: 16px; width: 100%; padding: 20px;
+    border: 2px solid var(--primary); border-radius: var(--radius);
+    background: var(--primary); color: var(--primary-text); text-decoration: none;
   }
-  textarea { min-height: 80px; resize: vertical; }
-  .opcao { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; margin: 10px 0; }
-  .opcao input { width: 22px; height: 22px; margin-top: 3px; flex: none; }
-  .msg { padding: 14px 16px; border-radius: var(--radius); border: 1px solid; margin: 16px 0; }
+  .btn-grande.sec { background: var(--surface); color: var(--text); }
+  .btn-grande strong { display: block; font-size: 1.25rem; }
+  .btn-grande small { display: block; font-size: 0.9rem; opacity: 0.85; }
+  .ico { font-size: 2rem; line-height: 1; flex: none; }
+  .pilha { display: grid; gap: 14px; margin: 20px 0; }
+  .acoes { display: flex; flex-wrap: wrap; gap: 10px; }
+
+  /* cartões e mensagens */
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 16px; margin-bottom: 16px; }
+  .msg { padding: 14px 16px; border-radius: var(--radius); border: 2px solid; margin: 16px 0; }
   .msg.ok { background: var(--ok-bg); border-color: var(--ok-line); }
   .msg.aviso { background: var(--warn-bg); border-color: var(--warn-line); }
-  .msg.erro { background: var(--err-bg); border-color: var(--err-line); }
-  .termo { margin: 8px 0 0; padding-left: 20px; }
-  .termo li { margin-bottom: 6px; }
-  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
-  .tag { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 0.9rem; }
+  .msg.erro { background: var(--err-bg); border-color: var(--err-line); font-weight: 600; }
+  .ajuda-contato:empty { display: none; }
+  .ajuda-contato { background: var(--sel-bg); border-radius: var(--radius); padding: 14px 16px; margin: 16px 0; }
+
+  /* formulários */
+  label.campo { display: block; margin: 16px 0 6px; font-weight: 700; }
+  .dica { display: block; font-weight: 400; color: var(--muted); font-size: 0.9rem; }
+  input[type=text], input[type=tel], input[type=search], textarea {
+    width: 100%; min-height: 58px; padding: 12px 14px;
+    border: 2px solid var(--line); border-radius: 10px;
+    background: var(--surface); color: var(--text); font: inherit; font-size: 1.1rem;
+  }
+  input:focus, textarea:focus { border-color: var(--foco); outline: none; }
+  textarea { min-height: 100px; resize: vertical; }
+
+  /* opções em cartão (rádio e caixa de seleção) */
+  .opcoes { display: grid; gap: 12px; margin: 12px 0 20px; }
+  .opcoes.lado { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+  .opcao-card {
+    position: relative; display: flex; align-items: center; gap: 14px;
+    min-height: 64px; padding: 14px 48px 14px 16px;
+    border: 2px solid var(--line); border-radius: var(--radius);
+    background: var(--surface); font-weight: 700; font-size: 1.05rem; cursor: pointer;
+  }
+  .opcao-card small { display: block; font-weight: 400; color: var(--muted); font-size: 0.85rem; }
+  .opcao-card input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .opcao-card:has(input:focus-visible) { outline: 3px solid var(--foco); outline-offset: 2px; }
+  .opcao-card:has(input:checked) { border-color: var(--primary); background: var(--sel-bg); box-shadow: inset 0 0 0 2px var(--primary); }
+  .opcao-card::after {
+    content: ""; position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    width: 26px; height: 26px; border: 2px solid var(--line); border-radius: 50%;
+  }
+  .opcao-card:has(input[type=checkbox])::after { border-radius: 6px; }
+  .opcao-card:has(input:checked)::after {
+    content: "✓"; border-color: var(--primary); background: var(--primary); color: var(--primary-text);
+    display: grid; place-items: center; font-size: 0.85rem;
+  }
+  .opcoes.lado .opcao-card { justify-content: center; padding: 14px; font-size: 1.2rem; }
+  .opcoes.lado .opcao-card::after { display: none; }
+
+  /* passo a passo */
+  .progresso { display: flex; align-items: center; gap: 12px; margin: 4px 0 18px; color: var(--muted); font-size: 0.9rem; font-weight: 600; }
+  .barra { flex: 1; height: 10px; background: var(--line); border-radius: 99px; overflow: hidden; }
+  .barra span { display: block; height: 100%; background: var(--primary); transition: width 0.2s; }
+  .nav-passos { display: grid; grid-template-columns: auto 1fr; gap: 12px; margin-top: 24px; }
+  .nav-passos .btn { white-space: nowrap; }
+  .opcional { font-size: 0.9rem; color: var(--muted); margin-top: -6px; }
+  dl.resumo { margin: 0 0 16px; }
+  dl.resumo dt { font-weight: 700; margin-top: 10px; font-size: 0.9rem; color: var(--muted); }
+  dl.resumo dd { margin: 0; font-size: 1.05rem; }
+
+  /* mapa */
+  .mapa { height: 340px; border-radius: var(--radius); border: 2px solid var(--line); z-index: 0; background: var(--sel-bg); }
+  .mapa.alto { height: 380px; }
+  .legenda { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 10px 0 6px; font-size: 0.95rem; }
+  .legenda span { display: inline-flex; align-items: center; gap: 6px; }
+  .selo {
+    display: inline-flex; gap: 4px; padding: 3px 8px; white-space: nowrap;
+    background: #ffffff; color: #1a1a1a; border: 2px solid #1a1a1a; border-radius: 99px;
+    font: 700 15px/1.3 system-ui, sans-serif; box-shadow: 0 1px 4px rgba(0,0,0,.3);
+    transform: translate(-50%, -50%); width: max-content;
+  }
+  .pino { font-size: 34px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,.45)); }
+  .seletor-status { margin: 10px 0 0; font-weight: 600; }
+  .busca { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin: 12px 0; }
+  .busca .btn { width: auto; }
+  .leaflet-container { font: inherit; font-size: 0.85rem; }
+
+  /* lista de pedidos */
   .linha { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
-  .id { color: var(--muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
-  dl { margin: 0 0 12px; }
-  dt { font-weight: 600; margin-top: 8px; }
-  dd { margin: 0; }
-  .acoes { display: flex; flex-wrap: wrap; gap: 8px; }
-  footer { color: var(--muted); font-size: 0.9rem; border-top: 1px solid var(--line); padding-top: 16px; margin-top: 32px; }
-  footer a { color: inherit; }
+  .id { color: var(--muted); font-size: 0.85rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .distancia { font-weight: 700; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 14px; }
+  .tag { border: 1px solid var(--line); border-radius: 99px; padding: 2px 12px; font-size: 0.9rem; background: var(--bg); }
+  .card.destaque { box-shadow: 0 0 0 3px var(--foco); }
+  .termo { margin: 8px 0 0; padding-left: 22px; }
+  .termo li { margin-bottom: 8px; }
+
+  footer { color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--line); padding-top: 16px; margin-top: 32px; }
   [hidden] { display: none !important; }
 </style>
 </head>
 <body>
 <main>
   <header>
-    <h1>Carona Solidária <span id="bairro"></span></h1>
+    <div class="topo">
+      <a class="marca" href="#">🤝 Carona Solidária</a>
+      <div class="fonte" role="group" aria-label="Tamanho da letra">
+        <button type="button" id="fonte-menos" aria-label="Diminuir a letra">A−</button>
+        <button type="button" id="fonte-mais" aria-label="Aumentar a letra">A+</button>
+      </div>
+    </div>
     <p class="data" id="data"></p>
   </header>
 
-  <!-- INÍCIO -->
+  <!-- ===================== INÍCIO ===================== -->
   <section id="v-inicio" data-view>
-    <p>Vizinhos que têm carro levam até o local de votação os vizinhos que têm dificuldade de chegar lá: idosos, pessoas com deficiência ou com problema de locomoção.</p>
+    <h1>Carona para votar, de vizinho para vizinho</h1>
+    <p>Quem tem carro leva até o local de votação quem tem dificuldade de chegar lá: idosos, pessoas com deficiência ou com problema de locomoção.</p>
     <p><strong>É de graça e não tem ligação com nenhum partido ou candidato.</strong></p>
-    <div class="escolha">
-      <a class="btn grande" href="#pedir">Preciso de carona</a>
-      <a class="btn grande sec" href="#motorista">Posso dar carona</a>
+
+    <div class="pilha">
+      <a class="btn-grande" href="#pedir">
+        <span class="ico" aria-hidden="true">🙋</span>
+        <span><strong>Preciso de carona</strong><small>Para mim ou para alguém da família</small></span>
+      </a>
+      <a class="btn-grande sec" href="#motorista">
+        <span class="ico" aria-hidden="true">🚗</span>
+        <span><strong>Posso dar carona</strong><small>Tenho carro e quero ajudar</small></span>
+      </a>
     </div>
-    <p>A votação vai das <strong>8h às 17h</strong>. Leve um documento oficial com foto.</p>
+
+    <div class="ajuda-contato"></div>
+
+    <h2>Mapa do bairro</h2>
+    <p>Mostra só a <strong>região aproximada</strong> de cada pedido e de cada motorista, nunca a casa de ninguém.</p>
+    <div id="mapa-inicio" class="mapa" role="img" aria-label="Mapa com a região aproximada dos pedidos e dos motoristas"></div>
+    <div class="legenda" aria-hidden="true">
+      <span>🙋 Precisa de carona</span>
+      <span>🚗 Motorista disponível</span>
+      <span>✅ Carona combinada</span>
+    </div>
+    <p id="totais" class="dica"></p>
+
+    <p style="margin-top:20px">Na hora de votar, leve um documento oficial com foto.</p>
     <p><a href="#avisos">Como funciona e regras importantes</a></p>
   </section>
 
-  <!-- PEDIR CARONA -->
+  <!-- ===================== PEDIR CARONA ===================== -->
   <section id="v-pedir" data-view hidden>
-    <a class="voltar" href="#">← Voltar</a>
-    <h2>Preciso de carona</h2>
-    <p>Pode preencher para você ou para um familiar ou vizinho. Um motorista voluntário vai chamar no WhatsApp para combinar.</p>
+    <form id="f-pedir" novalidate>
+      <div class="progresso"><span class="progresso-texto"></span><div class="barra"><span></span></div></div>
 
-    <form id="f-pedir" class="card" novalidate>
-      <fieldset>
-        <legend>Quem vai votar</legend>
-        <label for="p-nome">Nome <span class="dica">Como a pessoa gosta de ser chamada</span></label>
-        <input id="p-nome" name="nome" type="text" autocomplete="name" required maxlength="80">
+      <div class="passo" data-step="para-quem">
+        <h2 tabindex="-1">Para quem é a carona?</h2>
+        <div class="opcoes">
+          <label class="opcao-card"><input type="radio" name="para" value="mim" data-avanca><span class="ico" aria-hidden="true">🙋</span><span>Para mim</span></label>
+          <label class="opcao-card"><input type="radio" name="para" value="outra" data-avanca><span class="ico" aria-hidden="true">👵</span><span>Para outra pessoa<small>Familiar, vizinho ou amigo</small></span></label>
+        </div>
+      </div>
 
-        <label for="p-whatsapp">WhatsApp para combinar <span class="dica">Com DDD. Pode ser de um familiar.</span></label>
-        <input id="p-whatsapp" name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" required placeholder="(84) 99999-9999">
+      <div class="passo" data-step="nome" hidden>
+        <h2 tabindex="-1" id="p-titulo-nome">Qual é o seu nome?</h2>
+        <label class="campo" for="p-nome">Nome <span class="dica">Do jeito que gosta de ser chamado</span></label>
+        <input id="p-nome" name="nome" type="text" autocomplete="name" maxlength="80">
+        <div id="p-bloco-quem" hidden>
+          <label class="campo" for="p-quem">E o seu nome? <span class="dica">De quem está preenchendo, com o parentesco. Ex.: Ana, filha</span></label>
+          <input id="p-quem" name="quem_cadastra" type="text" maxlength="80">
+        </div>
+      </div>
 
-        <label for="p-quem">Está preenchendo para outra pessoa? <span class="dica">Seu nome e parentesco. Ex.: Ana, filha</span></label>
-        <input id="p-quem" name="quem_cadastra" type="text" maxlength="80">
-      </fieldset>
+      <div class="passo" data-step="whatsapp" hidden>
+        <h2 tabindex="-1">Qual WhatsApp o motorista deve chamar?</h2>
+        <label class="campo" for="p-whatsapp">WhatsApp com DDD <span class="dica">Pode ser o de um familiar</span></label>
+        <input id="p-whatsapp" name="whatsapp" type="tel" inputmode="numeric" autocomplete="tel" placeholder="(84) 99999-9999">
+      </div>
 
-      <fieldset>
-        <legend>Onde buscar</legend>
-        <label for="p-regiao">Rua e bairro <span class="dica">Sem o número. Isto aparece para os motoristas escolherem.</span></label>
-        <input id="p-regiao" name="regiao" type="text" required maxlength="80" placeholder="Rua das Flores, Lagoa Nova">
+      <div class="passo" data-step="mapa" hidden>
+        <h2 tabindex="-1">Marque no mapa onde buscar</h2>
+        <p>Assim o motorista sabe se é perto dele. O mapa aberto a todos mostra só a região aproximada.</p>
+        <div class="seletor" id="seletor-pedir"></div>
+        <p class="opcional">Se não conseguir, é só tocar em <strong>Continuar</strong>.</p>
+      </div>
 
-        <label for="p-endereco">Endereço completo <span class="dica">Com número e complemento. Só o motorista que aceitar vai ver.</span></label>
-        <input id="p-endereco" name="endereco" type="text" autocomplete="street-address" required maxlength="160">
-
-        <label for="p-ref">Ponto de referência</label>
+      <div class="passo" data-step="endereco" hidden>
+        <h2 tabindex="-1">Qual é o endereço?</h2>
+        <label class="campo" for="p-regiao">Rua e bairro <span class="dica">Os motoristas veem só isto antes de aceitar</span></label>
+        <input id="p-regiao" name="regiao" type="text" maxlength="80" placeholder="Rua das Flores, Lagoa Nova">
+        <label class="campo" for="p-numero">Número e complemento <span class="dica">Só o motorista que aceitar vai ver. Sem número? Escreva s/n.</span></label>
+        <input id="p-numero" name="numero" type="text" maxlength="60" placeholder="123, casa B">
+        <label class="campo" for="p-ref">Ponto de referência <span class="dica">Não é obrigatório</span></label>
         <input id="p-ref" name="referencia" type="text" maxlength="160" placeholder="Casa azul em frente à padaria">
-      </fieldset>
+      </div>
 
-      <fieldset>
-        <legend>Onde vota</legend>
-        <label for="p-local">Local de votação <span class="dica">Nome da escola. Se não souber, veja no título de eleitor ou no app e-Título.</span></label>
-        <input id="p-local" name="local_votacao" type="text" required maxlength="120">
+      <div class="passo" data-step="escola" hidden>
+        <h2 tabindex="-1">Onde vota?</h2>
+        <label class="campo" for="p-local">Nome da escola ou do local de votação <span class="dica">Está no título de eleitor ou no aplicativo e-Título</span></label>
+        <input id="p-local" name="local_votacao" type="text" maxlength="120">
+      </div>
 
-        <label>Melhor horário</label>
-        <label class="opcao"><input type="radio" name="turno" value="manha"> Manhã (8h às 12h)</label>
-        <label class="opcao"><input type="radio" name="turno" value="tarde"> Tarde (12h às 17h)</label>
-        <label class="opcao"><input type="radio" name="turno" value="tanto-faz" checked> Tanto faz</label>
+      <div class="passo" data-step="horario" hidden>
+        <h2 tabindex="-1">Qual é o melhor horário?</h2>
+        <div class="opcoes">
+          <label class="opcao-card"><input type="radio" name="turno" value="manha"><span class="ico" aria-hidden="true">☀️</span><span>De manhã<small>Das 8h ao meio-dia</small></span></label>
+          <label class="opcao-card"><input type="radio" name="turno" value="tarde"><span class="ico" aria-hidden="true">🌤️</span><span>À tarde<small>Do meio-dia às 17h</small></span></label>
+          <label class="opcao-card"><input type="radio" name="turno" value="tanto-faz" checked><span class="ico" aria-hidden="true">🕗</span><span>Qualquer horário</span></label>
+        </div>
+        <h3>Precisa de carona para voltar também?</h3>
+        <div class="opcoes lado">
+          <label class="opcao-card"><input type="radio" name="volta" value="sim" checked>Sim</label>
+          <label class="opcao-card"><input type="radio" name="volta" value="nao">Não</label>
+        </div>
+      </div>
 
-        <label class="opcao"><input type="checkbox" name="volta" checked> Precisa de carona também para voltar</label>
-      </fieldset>
-
-      <fieldset>
-        <legend>Precisa de alguma ajuda?</legend>
-        <label class="opcao"><input type="checkbox" name="cadeira_rodas"> Usa cadeira de rodas</label>
-        <label class="opcao"><input type="checkbox" name="andador"> Usa andador ou bengala</label>
-        <label class="opcao"><input type="checkbox" name="ajuda_entrar"> Precisa de ajuda para entrar e sair do carro</label>
-        <label class="opcao"><input type="checkbox" name="acompanhante"> Vai com um acompanhante</label>
-
-        <label for="p-obs">Algo mais que o motorista precisa saber?</label>
+      <div class="passo" data-step="ajuda" hidden>
+        <h2 tabindex="-1">Precisa de alguma ajuda?</h2>
+        <p class="opcional">Marque o que precisar. Se não precisar de nada, toque em Continuar.</p>
+        <div class="opcoes">
+          <label class="opcao-card"><input type="checkbox" name="cadeira_rodas"><span class="ico" aria-hidden="true">♿</span><span>Usa cadeira de rodas</span></label>
+          <label class="opcao-card"><input type="checkbox" name="andador"><span class="ico" aria-hidden="true">🦯</span><span>Usa andador ou bengala</span></label>
+          <label class="opcao-card"><input type="checkbox" name="ajuda_entrar"><span class="ico" aria-hidden="true">🤝</span><span>Precisa de ajuda para entrar e sair do carro</span></label>
+          <label class="opcao-card"><input type="checkbox" name="acompanhante"><span class="ico" aria-hidden="true">👥</span><span>Vai levar um acompanhante</span></label>
+        </div>
+        <label class="campo" for="p-obs">Algo mais que o motorista precisa saber? <span class="dica">Não é obrigatório</span></label>
         <textarea id="p-obs" name="observacoes" maxlength="300"></textarea>
-      </fieldset>
+      </div>
 
-      <label class="opcao"><input type="checkbox" name="consentimento" required>
-        <span>Autorizo o uso destes dados <strong>só para combinar a carona</strong>. Entendo que a carona é voluntária, que não está garantida e que os dados serão apagados até <span class="apagar"></span>.</span>
-      </label>
+      <div class="passo" data-step="conferir" hidden>
+        <h2 tabindex="-1">Confira e envie</h2>
+        <div class="card"><dl class="resumo" id="p-resumo"></dl></div>
+        <div class="opcoes">
+          <label class="opcao-card"><input type="checkbox" name="consentimento"><span>Autorizo usar estes dados <strong>só para combinar a carona</strong><small>A carona é voluntária e não é garantida. Os dados serão apagados até <span class="apagar"></span>.</small></span></label>
+        </div>
+      </div>
 
-      <div id="m-pedir"></div>
-      <button class="btn" type="submit">Pedir carona</button>
+      <div class="erro-passo" aria-live="assertive"></div>
+      <div class="nav-passos">
+        <button type="button" class="btn sec" data-voltar>← Voltar</button>
+        <button type="button" class="btn" data-continuar>Continuar →</button>
+        <button type="submit" class="btn" data-enviar hidden>✅ Pedir carona</button>
+      </div>
+      <div class="ajuda-contato"></div>
     </form>
 
-    <div id="ok-pedir" class="card" hidden>
-      <h2>Pedido recebido!</h2>
-      <p>O número do pedido é <strong id="ok-id"></strong>. Anote, caso precise falar com a organização.</p>
-      <p>Quando um motorista voluntário aceitar, ele vai chamar no WhatsApp informado para combinar o horário.</p>
-      <p id="ok-contato"></p>
+    <div id="ok-pedir" hidden>
+      <div class="msg ok"><h2 style="margin:0">✅ Pedido recebido!</h2></div>
+      <p style="font-size:1.15rem">O número do pedido é <strong id="ok-id"></strong>. Anote, caso precise falar com a organização.</p>
+      <p>Quando um motorista aceitar, ele vai chamar no WhatsApp que você informou para combinar o horário.</p>
+      <div class="ajuda-contato" data-texto="Se até sábado à noite ninguém tiver chamado, fale com a organização:"></div>
       <a class="btn sec" href="#">Voltar ao início</a>
     </div>
   </section>
 
-  <!-- MOTORISTA -->
+  <!-- ===================== MOTORISTA ===================== -->
   <section id="v-motorista" data-view hidden>
-    <a class="voltar" href="#">← Voltar</a>
-    <h2>Posso dar carona</h2>
 
-    <form id="f-codigo" class="card" novalidate>
+    <form id="f-codigo" novalidate>
+      <h2 tabindex="-1">Posso dar carona</h2>
       <p>A lista de pedidos é só para motoristas convidados. Digite o código do grupo que você recebeu.</p>
-      <label for="m-codigo">Código do grupo</label>
-      <input id="m-codigo" type="password" autocomplete="off" required>
-      <div id="m-cod"></div>
-      <button class="btn" type="submit">Ver pedidos</button>
+      <label class="campo" for="m-codigo">Código do grupo</label>
+      <input id="m-codigo" type="text" autocomplete="off" autocapitalize="none" spellcheck="false">
+      <div class="erro-passo" aria-live="assertive"></div>
+      <div class="nav-passos">
+        <a class="btn sec" href="#">← Voltar</a>
+        <button class="btn" type="submit">Entrar</button>
+      </div>
+    </form>
+
+    <div id="m-escolha" hidden>
+      <h2 tabindex="-1">Você já se cadastrou como motorista?</h2>
+      <div class="pilha">
+        <button type="button" class="btn-grande" id="b-cadastrar"><span class="ico" aria-hidden="true">📝</span><span><strong>Primeira vez</strong><small>Quero me cadastrar</small></span></button>
+        <button type="button" class="btn-grande sec" id="b-ja"><span class="ico" aria-hidden="true">👋</span><span><strong>Já me cadastrei</strong><small>Entrar com meu WhatsApp</small></span></button>
+      </div>
+      <form id="f-ja" hidden novalidate>
+        <label class="campo" for="m-ja-tel">Seu WhatsApp com DDD</label>
+        <input id="m-ja-tel" type="tel" inputmode="numeric" autocomplete="tel" placeholder="(84) 99999-9999">
+        <div class="erro-passo" aria-live="assertive"></div>
+        <button class="btn" type="submit" style="margin-top:16px">Entrar</button>
+      </form>
+    </div>
+
+    <form id="f-oferecer" hidden novalidate>
+      <div class="progresso"><span class="progresso-texto"></span><div class="barra"><span></span></div></div>
+
+      <div class="passo" data-step="nome">
+        <h2 tabindex="-1">Qual é o seu nome?</h2>
+        <label class="campo" for="o-nome">Nome</label>
+        <input id="o-nome" name="nome" type="text" autocomplete="name" maxlength="80">
+      </div>
+
+      <div class="passo" data-step="whatsapp" hidden>
+        <h2 tabindex="-1">Qual é o seu WhatsApp?</h2>
+        <label class="campo" for="o-whatsapp">WhatsApp com DDD <span class="dica">Também serve para você entrar de novo depois</span></label>
+        <input id="o-whatsapp" name="whatsapp" type="tel" inputmode="numeric" autocomplete="tel" placeholder="(84) 99999-9999">
+      </div>
+
+      <div class="passo" data-step="carro" hidden>
+        <h2 tabindex="-1">Sobre o seu carro</h2>
+        <label class="campo" for="o-carro">Modelo e cor <span class="dica">Para a pessoa reconhecer o carro</span></label>
+        <input id="o-carro" name="carro" type="text" maxlength="80" placeholder="Gol prata">
+        <h3 style="margin-top:20px">Quantas pessoas cabem, além de você?</h3>
+        <div class="opcoes lado">
+          <label class="opcao-card"><input type="radio" name="lugares" value="1">1</label>
+          <label class="opcao-card"><input type="radio" name="lugares" value="2">2</label>
+          <label class="opcao-card"><input type="radio" name="lugares" value="3">3</label>
+          <label class="opcao-card"><input type="radio" name="lugares" value="4">4</label>
+        </div>
+        <h3>Cabe uma cadeira de rodas dobrada?</h3>
+        <div class="opcoes lado">
+          <label class="opcao-card"><input type="radio" name="cadeira_ok" value="sim">Sim</label>
+          <label class="opcao-card"><input type="radio" name="cadeira_ok" value="nao" checked>Não</label>
+        </div>
+      </div>
+
+      <div class="passo" data-step="mapa" hidden>
+        <h2 tabindex="-1">De onde você vai sair?</h2>
+        <p>Assim mostramos primeiro os pedidos perto de você. No mapa aberto a todos aparece só a região aproximada.</p>
+        <div class="seletor" id="seletor-oferecer"></div>
+        <label class="campo" for="o-regiao">Rua e bairro <span class="dica">Não é obrigatório</span></label>
+        <input id="o-regiao" name="regiao" type="text" maxlength="80">
+      </div>
+
+      <div class="passo" data-step="horario" hidden>
+        <h2 tabindex="-1">Quando você pode ajudar?</h2>
+        <div class="opcoes">
+          <label class="opcao-card"><input type="radio" name="turno" value="manha"><span class="ico" aria-hidden="true">☀️</span><span>De manhã<small>Das 8h ao meio-dia</small></span></label>
+          <label class="opcao-card"><input type="radio" name="turno" value="tarde"><span class="ico" aria-hidden="true">🌤️</span><span>À tarde<small>Do meio-dia às 17h</small></span></label>
+          <label class="opcao-card"><input type="radio" name="turno" value="tanto-faz" checked><span class="ico" aria-hidden="true">🕗</span><span>O dia todo</span></label>
+        </div>
+      </div>
+
+      <div class="passo" data-step="termo" hidden>
+        <h2 tabindex="-1">Termo de compromisso</h2>
+        <div class="card">
+          <ul class="termo">
+            <li>Não vou pedir voto, falar de candidato ou partido, nem levar propaganda, adesivo ou santinho no carro.</li>
+            <li>Não vou cobrar nada, nem aceitar pagamento.</li>
+            <li>Tenho habilitação válida, e o carro está em condições de uso.</li>
+            <li>Sou responsável pela carona que aceitar. A organização só põe as pessoas em contato.</li>
+            <li>Se não puder mais ir, devolvo a carona para a lista o quanto antes e aviso a pessoa.</li>
+          </ul>
+        </div>
+        <div class="opcoes">
+          <label class="opcao-card"><input type="checkbox" name="compromisso"><span>Li e aceito o termo de compromisso</span></label>
+        </div>
+      </div>
+
+      <div class="erro-passo" aria-live="assertive"></div>
+      <div class="nav-passos">
+        <button type="button" class="btn sec" data-voltar>← Voltar</button>
+        <button type="button" class="btn" data-continuar>Continuar →</button>
+        <button type="submit" class="btn" data-enviar hidden>🚗 Quero dar carona</button>
+      </div>
     </form>
 
     <div id="painel" hidden>
-      <div class="card">
-        <h3>Termo de compromisso do motorista</h3>
-        <ul class="termo">
-          <li>Não vou pedir voto, falar de candidato ou partido, nem levar propaganda, adesivo ou santinho no carro.</li>
-          <li>Não vou cobrar nada, nem aceitar pagamento.</li>
-          <li>Tenho habilitação válida, e o carro está em condições de uso.</li>
-          <li>Sou responsável pela carona que aceitei. A organização só faz o contato entre as pessoas.</li>
-          <li>Se não puder mais ir, devolvo a carona para a lista o quanto antes.</li>
-        </ul>
-      </div>
-
+      <h2 tabindex="-1" id="ola"></h2>
       <div class="acoes" style="margin-bottom:16px">
-        <button class="btn peq" type="button" id="b-atualizar">Atualizar lista</button>
-        <button class="btn peq sec" type="button" id="b-minhas">Minhas caronas</button>
+        <button class="btn peq" type="button" id="b-atualizar">🔄 Atualizar</button>
+        <button class="btn peq sec" type="button" id="b-editar">✏️ Meu cadastro</button>
         <button class="btn peq sec" type="button" id="b-sair">Sair</button>
       </div>
-
-      <div id="m-lista"></div>
+      <div id="m-painel" aria-live="polite"></div>
       <div id="minhas"></div>
+      <h2>Pedidos esperando motorista</h2>
+      <div id="mapa-motorista" class="mapa alto" role="img" aria-label="Mapa com os pedidos esperando motorista"></div>
+      <div class="legenda" aria-hidden="true"><span>🙋 Pedido (região aproximada)</span><span>🚗 Você</span></div>
+      <p class="dica">Toque num 🙋 para ver o pedido na lista.</p>
       <div id="lista"></div>
     </div>
-
-    <template id="t-assumir">
-      <form class="f-assumir" novalidate>
-        <label>Seu nome</label>
-        <input name="nome" type="text" autocomplete="name" required maxlength="80">
-        <label>Seu WhatsApp</label>
-        <input name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" required placeholder="(84) 99999-9999">
-        <label>Carro <span class="dica">Modelo e cor, para a pessoa reconhecer</span></label>
-        <input name="carro" type="text" required maxlength="80" placeholder="Gol prata">
-        <label class="opcao"><input type="checkbox" name="compromisso" required> <span>Li e aceito o termo de compromisso acima.</span></label>
-        <div class="m-assumir"></div>
-        <button class="btn" type="submit">Confirmar: eu levo</button>
-      </form>
-    </template>
   </section>
 
-  <!-- AVISOS -->
+  <!-- ===================== AVISOS ===================== -->
   <section id="v-avisos" data-view hidden>
-    <a class="voltar" href="#">← Voltar</a>
+    <a class="btn peq sec" href="#" style="margin-bottom:16px">← Voltar</a>
     <h2>Como funciona</h2>
     <ol>
-      <li>Quem precisa de carona (ou alguém da família) preenche o pedido.</li>
-      <li>Motoristas convidados veem a lista, só com rua, bairro, local de votação e horário, e escolhem quem podem levar.</li>
+      <li>Quem precisa de carona (ou alguém da família) faz o pedido.</li>
+      <li>Motoristas convidados se cadastram e veem os pedidos, só com rua, bairro, local de votação e horário, e escolhem quem podem levar.</li>
       <li>Só o motorista que aceitou vê o nome, o telefone e o endereço completo. Ele chama no WhatsApp para combinar.</li>
+      <li>O mapa aberto a todos mostra só a região aproximada, nunca a casa de ninguém.</li>
     </ol>
 
     <h2>Regras e avisos importantes</h2>
@@ -274,14 +473,16 @@
       <p><strong>É proibido</strong> usar a carona para pedir voto, falar de candidato ou partido, levar propaganda eleitoral ou oferecer qualquer vantagem. Quem fizer isso será retirado do grupo. A compra de votos e o transporte de eleitores com finalidade eleitoral são crimes (Código Eleitoral e Lei nº 6.091/1974).</p>
       <p><strong>A organização só põe as pessoas em contato.</strong> Cada carona é um acordo direto entre o motorista e o passageiro. Os organizadores não dirigem, não fornecem veículos, não garantem que haverá carona e não se responsabilizam pela conduta dos participantes, pelo trajeto ou por acidentes.</p>
       <p><strong>Seus dados:</strong> usamos só para combinar a carona. Apenas os organizadores e o motorista que aceitar o pedido veem nome, telefone e endereço. Tudo será apagado até <span class="apagar"></span>.</p>
-      <p>Se você vir alguém descumprindo estas regras, avise a organização. Denúncias de crime eleitoral podem ser feitas no app <em>Pardal</em>, da Justiça Eleitoral.</p>
+      <p>Se você vir alguém descumprindo estas regras, avise a organização. Denúncias de crime eleitoral podem ser feitas no aplicativo <em>Pardal</em>, da Justiça Eleitoral.</p>
     </div>
+    <div class="ajuda-contato"></div>
   </section>
 
   <footer>
-    Iniciativa voluntária e apartidária, sem vínculo com candidatos ou partidos. A organização só põe as pessoas em contato. <a href="#avisos">Regras e avisos</a>.
+    Iniciativa voluntária e apartidária, sem vínculo com candidatos ou partidos. A organização só põe as pessoas em contato. <a href="#avisos">Regras e avisos</a>. Mapa © colaboradores do <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>.
   </footer>
 </main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="config.js"></script>
 <script src="app.js"></script>
 </body>

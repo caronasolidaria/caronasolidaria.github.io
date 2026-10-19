@@ -2,10 +2,15 @@
 window.CONFIG = {
   // URL do App da Web do Apps Script (termina em /exec). Ver README.md.
   SCRIPT_URL: '',
-  // Nome do bairro ou da comunidade, aparece no título.
-  BAIRRO: 'nosso bairro',
+  // Nome do bairro ou da comunidade, aparece no topo.
+  BAIRRO: '',
+  // Cidade, usada para procurar endereços no mapa.
+  CIDADE: 'Natal, RN',
+  // Centro e zoom iniciais do mapa (latitude, longitude). Pegue no openstreetmap.org.
+  CENTRO: [-5.8125, -35.2100],
+  ZOOM: 14,
   // Texto da data da votação.
-  DATA: 'Domingo, 25 de outubro de 2026 · 2º turno',
+  DATA: 'Domingo, 25 de outubro · 2º turno · das 8h às 17h',
   // WhatsApp de quem organiza (DDD + número, só dígitos). Deixe vazio para não exibir.
   CONTATO: '',
   // Até quando os dados ficam guardados antes de serem apagados.
