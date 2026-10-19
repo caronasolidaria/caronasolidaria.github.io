@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Carona Solidária</title>
+<meta name="description" content="Vizinhos com carro levando vizinhos com dificuldade de locomoção até o local de votação. Gratuito e apartidário.">
+<style>
+  :root {
+    --bg: #f6f4ef;
+    --surface: #ffffff;
+    --text: #1c1c1c;
+    --muted: #5a5a5a;
+    --line: #d9d4c9;
+    --primary: #262626;
+    --primary-text: #ffffff;
+    --ok-bg: #e8f1e8;
+    --ok-line: #9cc29c;
+    --warn-bg: #fff4dc;
+    --warn-line: #e3c27a;
+    --err-bg: #fbe7e5;
+    --err-line: #df9a92;
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616;
+      --surface: #212121;
+      --text: #f1f1f1;
+      --muted: #b3b3b3;
+      --line: #3a3a3a;
+      --primary: #f1f1f1;
+      --primary-text: #161616;
+      --ok-bg: #1f2e1f;
+      --ok-line: #4b744b;
+      --warn-bg: #33291a;
+      --warn-line: #8a6d32;
+      --err-bg: #3a2220;
+      --err-line: #8e4a43;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 18px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.75rem; line-height: 1.2; margin: 0 0 4px; }
+  h2 { font-size: 1.35rem; margin: 0 0 12px; }
+  h3 { font-size: 1.1rem; margin: 0 0 8px; }
+  p { margin: 0 0 12px; }
+  .data { color: var(--muted); margin-bottom: 16px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px 16px;
+    margin-bottom: 16px;
+  }
+  .escolha { display: grid; gap: 12px; margin: 20px 0; }
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    border: 2px solid var(--primary);
+    border-radius: var(--radius);
+    background: var(--primary);
+    color: var(--primary-text);
+    font: inherit;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .btn.sec { background: transparent; color: var(--text); }
+  .btn.peq { display: inline-block; width: auto; padding: 8px 14px; font-size: 0.95rem; }
+  .btn:disabled { opacity: 0.5; cursor: wait; }
+  .grande { font-size: 1.2rem; padding: 20px 16px; }
+  .voltar { display: inline-block; margin-bottom: 16px; color: var(--text); }
+  fieldset { border: 0; padding: 0; margin: 0 0 20px; }
+  legend { font-weight: 700; font-size: 1.1rem; margin-bottom: 8px; padding: 0; }
+  label { display: block; margin: 12px 0 4px; font-weight: 600; }
+  .dica { display: block; font-weight: 400; color: var(--muted); font-size: 0.9rem; }
+  input[type=text], input[type=tel], input[type=password], textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+  }
+  textarea { min-height: 80px; resize: vertical; }
+  .opcao { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; margin: 10px 0; }
+  .opcao input { width: 22px; height: 22px; margin-top: 3px; flex: none; }
+  .msg { padding: 14px 16px; border-radius: var(--radius); border: 1px solid; margin: 16px 0; }
+  .msg.ok { background: var(--ok-bg); border-color: var(--ok-line); }
+  .msg.aviso { background: var(--warn-bg); border-color: var(--warn-line); }
+  .msg.erro { background: var(--err-bg); border-color: var(--err-line); }
+  .termo { margin: 8px 0 0; padding-left: 20px; }
+  .termo li { margin-bottom: 6px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
+  .tag { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 0.9rem; }
+  .linha { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .id { color: var(--muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+  dl { margin: 0 0 12px; }
+  dt { font-weight: 600; margin-top: 8px; }
+  dd { margin: 0; }
+  .acoes { display: flex; flex-wrap: wrap; gap: 8px; }
+  footer { color: var(--muted); font-size: 0.9rem; border-top: 1px solid var(--line); padding-top: 16px; margin-top: 32px; }
+  footer a { color: inherit; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Carona Solidária <span id="bairro"></span></h1>
+    <p class="data" id="data"></p>
+  </header>
+
+  <!-- INÍCIO -->
+  <section id="v-inicio" data-view>
+    <p>Vizinhos que têm carro levam até o local de votação os vizinhos que têm dificuldade de chegar lá: idosos, pessoas com deficiência ou com problema de locomoção.</p>
+    <p><strong>É de graça e não tem ligação com nenhum partido ou candidato.</strong></p>
+    <div class="escolha">
+      <a class="btn grande" href="#pedir">Preciso de carona</a>
+      <a class="btn grande sec" href="#motorista">Posso dar carona</a>
+    </div>
+    <p>A votação vai das <strong>8h às 17h</strong>. Leve um documento oficial com foto.</p>
+    <p><a href="#avisos">Como funciona e regras importantes</a></p>
+  </section>
+
+  <!-- PEDIR CARONA -->
+  <section id="v-pedir" data-view hidden>
+    <a class="voltar" href="#">← Voltar</a>
+    <h2>Preciso de carona</h2>
+    <p>Pode preencher para você ou para um familiar ou vizinho. Um motorista voluntário vai chamar no WhatsApp para combinar.</p>
+
+    <form id="f-pedir" class="card" novalidate>
+      <fieldset>
+        <legend>Quem vai votar</legend>
+        <label for="p-nome">Nome <span class="dica">Como a pessoa gosta de ser chamada</span></label>
+        <input id="p-nome" name="nome" type="text" autocomplete="name" required maxlength="80">
+
+        <label for="p-whatsapp">WhatsApp para combinar <span class="dica">Com DDD. Pode ser de um familiar.</span></label>
+        <input id="p-whatsapp" name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" required placeholder="(84) 99999-9999">
+
+        <label for="p-quem">Está preenchendo para outra pessoa? <span class="dica">Seu nome e parentesco. Ex.: Ana, filha</span></label>
+        <input id="p-quem" name="quem_cadastra" type="text" maxlength="80">
+      </fieldset>
+
+      <fieldset>
+        <legend>Onde buscar</legend>
+        <label for="p-regiao">Rua e bairro <span class="dica">Sem o número. Isto aparece para os motoristas escolherem.</span></label>
+        <input id="p-regiao" name="regiao" type="text" required maxlength="80" placeholder="Rua das Flores, Lagoa Nova">
+
+        <label for="p-endereco">Endereço completo <span class="dica">Com número e complemento. Só o motorista que aceitar vai ver.</span></label>
+        <input id="p-endereco" name="endereco" type="text" autocomplete="street-address" required maxlength="160">
+
+        <label for="p-ref">Ponto de referência</label>
+        <input id="p-ref" name="referencia" type="text" maxlength="160" placeholder="Casa azul em frente à padaria">
+      </fieldset>
+
+      <fieldset>
+        <legend>Onde vota</legend>
+        <label for="p-local">Local de votação <span class="dica">Nome da escola. Se não souber, veja no título de eleitor ou no app e-Título.</span></label>
+        <input id="p-local" name="local_votacao" type="text" required maxlength="120">
+
+        <label>Melhor horário</label>
+        <label class="opcao"><input type="radio" name="turno" value="manha"> Manhã (8h às 12h)</label>
+        <label class="opcao"><input type="radio" name="turno" value="tarde"> Tarde (12h às 17h)</label>
+        <label class="opcao"><input type="radio" name="turno" value="tanto-faz" checked> Tanto faz</label>
+
+        <label class="opcao"><input type="checkbox" name="volta" checked> Precisa de carona também para voltar</label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Precisa de alguma ajuda?</legend>
+        <label class="opcao"><input type="checkbox" name="cadeira_rodas"> Usa cadeira de rodas</label>
+        <label class="opcao"><input type="checkbox" name="andador"> Usa andador ou bengala</label>
+        <label class="opcao"><input type="checkbox" name="ajuda_entrar"> Precisa de ajuda para entrar e sair do carro</label>
+        <label class="opcao"><input type="checkbox" name="acompanhante"> Vai com um acompanhante</label>
+
+        <label for="p-obs">Algo mais que o motorista precisa saber?</label>
+        <textarea id="p-obs" name="observacoes" maxlength="300"></textarea>
+      </fieldset>
+
+      <label class="opcao"><input type="checkbox" name="consentimento" required>
+        <span>Autorizo o uso destes dados <strong>só para combinar a carona</strong>. Entendo que a carona é voluntária, que não está garantida e que os dados serão apagados até <span class="apagar"></span>.</span>
+      </label>
+
+      <div id="m-pedir"></div>
+      <button class="btn" type="submit">Pedir carona</button>
+    </form>
+
+    <div id="ok-pedir" class="card" hidden>
+      <h2>Pedido recebido!</h2>
+      <p>O número do pedido é <strong id="ok-id"></strong>. Anote, caso precise falar com a organização.</p>
+      <p>Quando um motorista voluntário aceitar, ele vai chamar no WhatsApp informado para combinar o horário.</p>
+      <p id="ok-contato"></p>
+      <a class="btn sec" href="#">Voltar ao início</a>
+    </div>
+  </section>
+
+  <!-- MOTORISTA -->
+  <section id="v-motorista" data-view hidden>
+    <a class="voltar" href="#">← Voltar</a>
+    <h2>Posso dar carona</h2>
+
+    <form id="f-codigo" class="card" novalidate>
+      <p>A lista de pedidos é só para motoristas convidados. Digite o código do grupo que você recebeu.</p>
+      <label for="m-codigo">Código do grupo</label>
+      <input id="m-codigo" type="password" autocomplete="off" required>
+      <div id="m-cod"></div>
+      <button class="btn" type="submit">Ver pedidos</button>
+    </form>
+
+    <div id="painel" hidden>
+      <div class="card">
+        <h3>Termo de compromisso do motorista</h3>
+        <ul class="termo">
+          <li>Não vou pedir voto, falar de candidato ou partido, nem levar propaganda, adesivo ou santinho no carro.</li>
+          <li>Não vou cobrar nada, nem aceitar pagamento.</li>
+          <li>Tenho habilitação válida, e o carro está em condições de uso.</li>
+          <li>Sou responsável pela carona que aceitei. A organização só faz o contato entre as pessoas.</li>
+          <li>Se não puder mais ir, devolvo a carona para a lista o quanto antes.</li>
+        </ul>
+      </div>
+
+      <div class="acoes" style="margin-bottom:16px">
+        <button class="btn peq" type="button" id="b-atualizar">Atualizar lista</button>
+        <button class="btn peq sec" type="button" id="b-minhas">Minhas caronas</button>
+        <button class="btn peq sec" type="button" id="b-sair">Sair</button>
+      </div>
+
+      <div id="m-lista"></div>
+      <div id="minhas"></div>
+      <div id="lista"></div>
+    </div>
+
+    <template id="t-assumir">
+      <form class="f-assumir" novalidate>
+        <label>Seu nome</label>
+        <input name="nome" type="text" autocomplete="name" required maxlength="80">
+        <label>Seu WhatsApp</label>
+        <input name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" required placeholder="(84) 99999-9999">
+        <label>Carro <span class="dica">Modelo e cor, para a pessoa reconhecer</span></label>
+        <input name="carro" type="text" required maxlength="80" placeholder="Gol prata">
+        <label class="opcao"><input type="checkbox" name="compromisso" required> <span>Li e aceito o termo de compromisso acima.</span></label>
+        <div class="m-assumir"></div>
+        <button class="btn" type="submit">Confirmar: eu levo</button>
+      </form>
+    </template>
+  </section>
+
+  <!-- AVISOS -->
+  <section id="v-avisos" data-view hidden>
+    <a class="voltar" href="#">← Voltar</a>
+    <h2>Como funciona</h2>
+    <ol>
+      <li>Quem precisa de carona (ou alguém da família) preenche o pedido.</li>
+      <li>Motoristas convidados veem a lista, só com rua, bairro, local de votação e horário, e escolhem quem podem levar.</li>
+      <li>Só o motorista que aceitou vê o nome, o telefone e o endereço completo. Ele chama no WhatsApp para combinar.</li>
+    </ol>
+
+    <h2>Regras e avisos importantes</h2>
+    <div class="card">
+      <p><strong>Iniciativa voluntária, apartidária e sem fins lucrativos</strong>, de vizinhos para vizinhos. Não tem nenhuma ligação com candidatos, partidos, coligações ou governos, e não recebe dinheiro de ninguém.</p>
+      <p><strong>É proibido</strong> usar a carona para pedir voto, falar de candidato ou partido, levar propaganda eleitoral ou oferecer qualquer vantagem. Quem fizer isso será retirado do grupo. A compra de votos e o transporte de eleitores com finalidade eleitoral são crimes (Código Eleitoral e Lei nº 6.091/1974).</p>
+      <p><strong>A organização só põe as pessoas em contato.</strong> Cada carona é um acordo direto entre o motorista e o passageiro. Os organizadores não dirigem, não fornecem veículos, não garantem que haverá carona e não se responsabilizam pela conduta dos participantes, pelo trajeto ou por acidentes.</p>
+      <p><strong>Seus dados:</strong> usamos só para combinar a carona. Apenas os organizadores e o motorista que aceitar o pedido veem nome, telefone e endereço. Tudo será apagado até <span class="apagar"></span>.</p>
+      <p>Se você vir alguém descumprindo estas regras, avise a organização. Denúncias de crime eleitoral podem ser feitas no app <em>Pardal</em>, da Justiça Eleitoral.</p>
+    </div>
+  </section>
+
+  <footer>
+    Iniciativa voluntária e apartidária, sem vínculo com candidatos ou partidos. A organização só põe as pessoas em contato. <a href="#avisos">Regras e avisos</a>.
+  </footer>
+</main>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
