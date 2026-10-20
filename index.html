@@ -224,6 +224,7 @@
       <span>🙋 Precisa de carona</span>
       <span>🚗 Motorista disponível</span>
       <span>✅ Carona combinada</span>
+      <span>🗳️ Local de votação</span>
     </div>
     <p id="totais" class="dica"></p>
 
@@ -279,8 +280,15 @@
 
       <div class="passo" data-step="escola" hidden>
         <h2 tabindex="-1">Onde vota?</h2>
-        <label class="campo" for="p-local">Nome da escola ou do local de votação <span class="dica">Está no título de eleitor ou no aplicativo e-Título</span></label>
+        <label class="campo" for="p-local">Nome da escola ou do local de votação <span class="dica">Ex.: Escola Estadual Ponta Negra</span></label>
         <input id="p-local" name="local_votacao" type="text" maxlength="120">
+        <p class="opcional" style="margin-top:8px">Depois toque em <strong>Procurar a escola no mapa</strong>, para o motorista saber aonde ir.</p>
+        <div class="seletor" id="seletor-escola"></div>
+        <div class="ajuda-contato" data-sempre>
+          <strong>Não sabe onde vota?</strong> Veja no aplicativo <em>e-Título</em>, em "Onde votar", ou no
+          <a href="https://www.tse.jus.br" target="_blank" rel="noopener">site do TSE</a>, em "Autoatendimento Eleitoral".
+          Também está no título de eleitor.
+        </div>
       </div>
 
       <div class="passo" data-step="horario" hidden>
@@ -450,7 +458,7 @@
       <div id="minhas"></div>
       <h2>Pedidos esperando motorista</h2>
       <div id="mapa-motorista" class="mapa alto" role="img" aria-label="Mapa com os pedidos esperando motorista"></div>
-      <div class="legenda" aria-hidden="true"><span>🙋 Pedido (região aproximada)</span><span>🚗 Você</span></div>
+      <div class="legenda" aria-hidden="true"><span>🙋 Pedido (região aproximada)</span><span>🗳️ Local de votação</span><span>🚗 Você</span></div>
       <p class="dica">Toque num 🙋 para ver o pedido na lista.</p>
       <div id="lista"></div>
     </div>

@@ -19,7 +19,7 @@ const COLUNAS = [
   'local_votacao', 'turno', 'volta',
   'cadeira_rodas', 'andador', 'ajuda_entrar', 'acompanhante', 'observacoes',
   'motorista_nome', 'motorista_whatsapp', 'motorista_carro', 'combinado_em',
-  'lat', 'lng',
+  'lat', 'lng', 'local_lat', 'local_lng',
 ];
 const ABA_MOT = 'Motoristas';
 const COLUNAS_MOT = [
@@ -94,7 +94,7 @@ function pedir(d) {
     ajuda_entrar: simNao(d.ajuda_entrar),
     acompanhante: simNao(d.acompanhante),
     observacoes: texto(d.observacoes, 300, false),
-  }, coordenadas(d));
+  }, coordenadas(d), localDeVotacao(d));
   if (d.consentimento !== true) throw new Error('É preciso aceitar o uso dos dados.');
 
   return comTrava(() => {
@@ -139,9 +139,13 @@ function oferecer(d) {
   });
 }
 
-/** Pontos aproximados para o mapa aberto: nenhuma informação pessoal sai daqui. */
+/**
+ * Pontos aproximados para o mapa aberto: nenhuma informação pessoal sai daqui.
+ * Os locais de votação (escolas, prédios públicos) vão com a posição exata.
+ */
 function mapa() {
   const celulas = {};
+  const locais = {};
   const totais = { pedidos: 0, combinados: 0, motoristas: 0 };
   function somar(l, tipo) {
     totais[tipo]++;
@@ -153,13 +157,24 @@ function mapa() {
     celulas[k][tipo]++;
   }
   ler(planilha(ABA), COLUNAS).forEach(l => {
+    const ativo = l.status === 'aberto' || l.status === 'combinado' || l.status === 'realizado';
     if (l.status === 'aberto') somar(l, 'pedidos');
-    else if (l.status === 'combinado' || l.status === 'realizado') somar(l, 'combinados');
+    else if (ativo) somar(l, 'combinados');
+    if (ativo && l.local_lat && l.local_lng) {
+      const k = l.local_lat + ',' + l.local_lng;
+      locais[k] = locais[k] || { nome: l.local_votacao, lat: Number(l.local_lat), lng: Number(l.local_lng), pessoas: 0 };
+      locais[k].pessoas++;
+    }
   });
   ler(planilha(ABA_MOT), COLUNAS_MOT).forEach(l => {
     if (l.status === 'ativo') somar(l, 'motoristas');
   });
-  return { ok: true, pontos: Object.keys(celulas).map(k => celulas[k]), totais: totais };
+  return {
+    ok: true,
+    pontos: Object.keys(celulas).map(k => celulas[k]),
+    locais: Object.keys(locais).map(k => locais[k]),
+    totais: totais,
+  };
 }
 
 function listar() {
@@ -170,6 +185,10 @@ function listar() {
     if (l.lat && l.lng) {
       o.lat = arredondar(l.lat, GRADE_MOTORISTA);
       o.lng = arredondar(l.lng, GRADE_MOTORISTA);
+    }
+    if (l.local_lat && l.local_lng) {
+      o.local_lat = Number(l.local_lat);
+      o.local_lng = Number(l.local_lng);
     }
     return o;
   });
@@ -297,6 +316,11 @@ function coordenadas(d) {
   const ok = d.lat !== '' && d.lat != null && isFinite(lat) && isFinite(lng) &&
     Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
   return ok ? { lat: lat.toFixed(5), lng: lng.toFixed(5) } : { lat: '', lng: '' };
+}
+
+function localDeVotacao(d) {
+  const c = coordenadas({ lat: d.local_lat, lng: d.local_lng });
+  return { local_lat: c.lat, local_lng: c.lng };
 }
 
 function arredondar(v, grade) {

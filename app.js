@@ -126,47 +126,79 @@
     return 'a uns ' + km.toFixed(1).replace('.', ',') + ' km de você';
   }
 
-  /** Mapa para marcar um ponto: localização do aparelho, busca por endereço ou toque. */
-  function Seletor(raiz, emoji, aoEndereco) {
+  /**
+   * Mapa para marcar um ponto: localização do aparelho, busca por endereço ou toque.
+   * opts.campo: usa um campo já existente como texto da busca (ex.: nome da escola).
+   * opts.lista: mostra até 5 resultados para a pessoa escolher.
+   * opts.semLocalizacao: esconde o botão "usar minha localização".
+   */
+  function Seletor(raiz, emoji, aoEndereco, opts) {
     var s = this;
+    opts = opts || {};
     s.lat = null; s.lng = null; s.mapa = null; s.marcador = null; s.emoji = emoji; s.aoEndereco = aoEndereco;
-    var bLocal = el('button', { type: 'button', class: 'btn', text: '📍 Usar minha localização' });
-    var busca = el('input', { type: 'search', placeholder: 'Rua e bairro', 'aria-label': 'Procurar endereço no mapa' });
-    var bBusca = el('button', { type: 'button', class: 'btn sec', text: 'Procurar' });
+    var busca = opts.campo || el('input', { type: 'search', placeholder: 'Rua e bairro', 'aria-label': 'Procurar endereço no mapa' });
+    var bBusca = el('button', { type: 'button', class: 'btn sec', text: opts.textoBusca || 'Procurar' });
+    var lista = el('div', { class: 'opcoes', 'aria-live': 'polite' });
     s.div = el('div', { class: 'mapa' });
     s.status = el('p', { class: 'seletor-status', 'aria-live': 'polite', text: 'Ou toque no mapa, no lugar certo.' });
-    raiz.append(bLocal, el('p', { class: 'dica', text: 'Funciona melhor se estiver no local agora.' }),
-      el('p', { class: 'dica', style: 'margin:12px 0 0', text: 'Ou procure pelo endereço:' }),
-      el('div', { class: 'busca', style: 'margin-top:4px' }, [busca, bBusca]), s.div, s.status);
+    if (!opts.semLocalizacao) {
+      var bLocal = el('button', { type: 'button', class: 'btn', text: '📍 Usar minha localização' });
+      raiz.append(bLocal, el('p', { class: 'dica', text: 'Funciona melhor se estiver no local agora.' }));
+      bLocal.addEventListener('click', function () {
+        if (!navigator.geolocation) { s.status.textContent = 'Este aparelho não informa a localização. Procure a rua ou toque no mapa.'; return; }
+        s.status.textContent = 'Procurando sua localização…';
+        navigator.geolocation.getCurrentPosition(function (p) {
+          s.marcar(p.coords.latitude, p.coords.longitude, true, true);
+        }, function (err) {
+          s.status.textContent = err.code === 1
+            ? 'Sem permissão para usar a localização. Procure a rua ou toque no mapa.'
+            : 'Não foi possível achar a localização. Procure a rua ou toque no mapa.';
+        }, { enableHighAccuracy: true, timeout: 15000 });
+      });
+    }
+    if (opts.campo) raiz.append(bBusca);
+    else raiz.append(el('p', { class: 'dica', style: 'margin:12px 0 0', text: 'Ou procure pelo endereço:' }),
+      el('div', { class: 'busca', style: 'margin-top:4px' }, [busca, bBusca]));
+    raiz.append(lista, s.div, s.status);
 
-    bLocal.addEventListener('click', function () {
-      if (!navigator.geolocation) { s.status.textContent = 'Este aparelho não informa a localização. Procure a rua ou toque no mapa.'; return; }
-      s.status.textContent = 'Procurando sua localização…';
-      navigator.geolocation.getCurrentPosition(function (p) {
-        s.marcar(p.coords.latitude, p.coords.longitude, true, true);
-      }, function (err) {
-        s.status.textContent = err.code === 1
-          ? 'Sem permissão para usar a localização. Procure a rua ou toque no mapa.'
-          : 'Não foi possível achar a localização. Procure a rua ou toque no mapa.';
-      }, { enableHighAccuracy: true, timeout: 15000 });
-    });
+    function escolher(r) {
+      lista.replaceChildren();
+      s.marcar(Number(r.lat), Number(r.lon), true, false);
+      s.status.textContent = '✅ Marcado no mapa. Confira se o ' + s.emoji + ' está no lugar certo. Se não estiver, toque no lugar certo.';
+      if (opts.aoEscolher) opts.aoEscolher(r.name || r.display_name.split(',')[0]);
+      else if (s.aoEndereco) s.aoEndereco(busca.value.trim());
+    }
     function procurar() {
       var q = busca.value.trim();
-      if (!q) { busca.focus(); return; }
+      if (!q) { busca.focus(); s.status.textContent = 'Escreva primeiro o que procurar.'; return; }
       s.status.textContent = 'Procurando…';
-      fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=br&accept-language=pt-BR&q=' +
-        encodeURIComponent(q + (C.CIDADE ? ', ' + C.CIDADE : '')))
+      lista.replaceChildren();
+      s.mostrar();
+      var c = C.CENTRO, d = 0.2;
+      fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=br&accept-language=pt-BR' +
+        '&limit=' + (opts.lista ? 5 : 1) + '&viewbox=' + [c[1] - d, c[0] + d, c[1] + d, c[0] - d].join(',') + '&bounded=1' +
+        '&q=' + encodeURIComponent(q))
         .then(function (r) { return r.json(); })
         .then(function (res) {
-          if (!res.length) { s.status.textContent = 'Não achei esse endereço. Tente só a rua e o bairro, ou toque no mapa.'; return; }
-          s.marcar(Number(res[0].lat), Number(res[0].lon), true, false);
-          s.status.textContent = '✅ Achei! Confira se o ' + s.emoji + ' está no lugar certo. Se não estiver, toque no lugar certo.';
-          if (s.aoEndereco) s.aoEndereco(q);
+          if (!res.length) { s.status.textContent = 'Não achei. Confira o nome ou toque no mapa, no lugar certo.'; return; }
+          if (!opts.lista || res.length === 1) return escolher(res[0]);
+          s.status.textContent = 'Se não for nenhum desses, toque no mapa, no lugar certo.';
+          lista.appendChild(el('p', { class: 'seletor-status', style: 'margin:0', text: 'Achei estes. Toque no certo:' }));
+          res.forEach(function (r) {
+            var a = r.address || {};
+            var b = el('button', { type: 'button', class: 'opcao-card', style: 'text-align:left;width:100%;font:inherit;font-weight:700;color:inherit' }, [
+              el('span', { class: 'ico', 'aria-hidden': 'true', text: s.emoji }),
+              el('span', {}, [r.name || r.display_name.split(',')[0],
+                el('small', { text: [a.road, a.suburb || a.neighbourhood].filter(Boolean).join(', ') })]),
+            ]);
+            b.addEventListener('click', function () { escolher(r); });
+            lista.appendChild(b);
+          });
         })
         .catch(function () { s.status.textContent = 'A busca não funcionou agora. Toque no mapa, no lugar certo.'; });
     }
     bBusca.addEventListener('click', procurar);
-    busca.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); procurar(); } });
+    busca.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); procurar(); } });
   }
 
   Seletor.prototype.mostrar = function () {
@@ -304,6 +336,11 @@
         }).addTo(camadaInicio);
         pontos.push([p.lat, p.lng]);
       });
+      (r.locais || []).forEach(function (l) {
+        L.marker([l.lat, l.lng], { icon: pino('🗳️'), title: l.nome }).addTo(camadaInicio)
+          .bindTooltip(el('span', { text: l.nome + ' · ' + plural(l.pessoas, 'pessoa', 'pessoas') }));
+        pontos.push([l.lat, l.lng]);
+      });
       if (pontos.length) mapaInicio.fitBounds(pontos, { padding: [50, 50], maxZoom: 15 });
       var t = r.totais;
       $('#totais').textContent = plural(t.pedidos, 'pessoa esperando carona', 'pessoas esperando carona') + ' · ' +
@@ -319,6 +356,11 @@
     if (!f.value.trim()) f.value = txt;
   });
 
+  var selEscola = new Seletor($('#seletor-escola'), '🗳️', null, {
+    campo: $('#p-local'), lista: true, semLocalizacao: true, textoBusca: '🔎 Procurar a escola no mapa',
+    aoEscolher: function (nome) { if (nome) $('#p-local').value = nome; },
+  });
+
   function dadosPedido(f) {
     var outra = valor(f, 'para') === 'outra';
     return {
@@ -328,7 +370,7 @@
       cadeira_rodas: f.cadeira_rodas.checked, andador: f.andador.checked,
       ajuda_entrar: f.ajuda_entrar.checked, acompanhante: f.acompanhante.checked,
       observacoes: f.observacoes.value, consentimento: f.consentimento.checked,
-      lat: selPedir.lat, lng: selPedir.lng,
+      lat: selPedir.lat, lng: selPedir.lng, local_lat: selEscola.lat, local_lng: selEscola.lng,
     };
   }
 
@@ -351,6 +393,7 @@
         $('#p-bloco-quem').hidden = !outra;
       }
       if (passo === 'mapa') selPedir.mostrar();
+      if (passo === 'escola') selEscola.mostrar();
       if (passo === 'conferir') {
         var d = dadosPedido(f);
         var ajudas = Object.keys(AJUDAS).filter(function (k) { return d[k]; }).map(function (k) { return AJUDAS[k]; });
@@ -362,6 +405,7 @@
           ['Referência', d.referencia],
           ['No mapa', d.lat != null ? '✅ Marcado' : 'Não marcado'],
           ['Vota em', d.local_votacao],
+          ['Escola no mapa', d.local_lat != null ? '✅ Marcada' : 'Não marcada'],
           ['Horário', TURNOS[d.turno]],
           ['Volta', d.volta ? 'Precisa de carona na volta' : 'Só a ida'],
           ['Ajuda', ajudas.join(' · ') || 'Nenhuma'],
@@ -379,6 +423,7 @@
       return api('pedir', { dados: dadosPedido(f) }).then(function (r) {
         f.reset();
         selPedir.limpar();
+        selEscola.limpar();
         wPedir.ir(0);
         f.hidden = true;
         $('#ok-id').textContent = r.id;
@@ -570,6 +615,16 @@
       });
       pontos.push([p.lat, p.lng]);
     });
+    var escolas = {};
+    pedidos.forEach(function (p) {
+      if (p.local_lat === undefined) return;
+      var k = p.local_lat + ',' + p.local_lng;
+      if (escolas[k]) return;
+      escolas[k] = true;
+      L.marker([p.local_lat, p.local_lng], { icon: pino('🗳️'), title: p.local_votacao }).addTo(camadaMot)
+        .bindTooltip(el('span', { text: p.local_votacao }));
+      pontos.push([p.local_lat, p.local_lng]);
+    });
     if (pontos.length > 1) mapaMot.fitBounds(pontos, { padding: [50, 50], maxZoom: 16 });
     else if (pontos.length === 1) mapaMot.setView(pontos[0], 15);
   }
@@ -578,7 +633,9 @@
     var cartao = el('article', { class: 'card', id: 'pedido-' + p.id }, [
       el('div', { class: 'linha' }, [el('h3', { text: p.regiao }), el('span', { class: 'id', text: p.id })]),
       p.km != null ? el('p', { class: 'distancia', text: '📍 ' + textoDistancia(p.km) }) : null,
-      el('p', { text: '🗳️ Vota em: ' + p.local_votacao }),
+      el('p', { text: '🗳️ Vota em: ' + p.local_votacao +
+        (p.lat !== undefined && p.local_lat !== undefined
+          ? ' (' + textoDistancia(distanciaKm([p.lat, p.lng], [p.local_lat, p.local_lng])).replace(' de você', ' da casa') + ')' : '') }),
       tags(p),
     ]);
     var botao = el('button', { class: 'btn', type: 'button', text: '🚗 Eu levo esta pessoa' });
@@ -639,13 +696,16 @@
     var zap = el('a', { class: 'btn', target: '_blank', rel: 'noopener', text: '💬 Chamar no WhatsApp',
       href: 'https://wa.me/55' + digitos(c.whatsapp) + '?text=' + encodeURIComponent(texto) });
     var destino = c.lat ? c.lat + ',' + c.lng : c.endereco + (C.CIDADE ? ', ' + C.CIDADE : '');
-    var rota = el('a', { class: 'btn sec', target: '_blank', rel: 'noopener', text: '🗺️ Ver o caminho',
+    var rota = el('a', { class: 'btn sec', target: '_blank', rel: 'noopener', text: '🏠 Caminho até a casa',
       href: 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(destino) });
+    var escola = c.local_lat ? c.local_lat + ',' + c.local_lng : c.local_votacao + (C.CIDADE ? ', ' + C.CIDADE : '');
+    var rotaEscola = el('a', { class: 'btn sec', target: '_blank', rel: 'noopener', text: '🗳️ Caminho da casa até o local de votação',
+      href: 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(destino) + '&destination=' + encodeURIComponent(escola) });
     var desistir = el('button', { class: 'btn sec', type: 'button', text: 'Não posso mais ir' });
     var cartao = el('article', { class: 'card' }, [
       el('div', { class: 'linha' }, [el('h3', { text: '🙋 ' + c.nome }), el('span', { class: 'id', text: c.id })]),
       dl,
-      el('div', { class: 'pilha', style: 'margin:0' }, [zap, rota, desistir]),
+      el('div', { class: 'pilha', style: 'margin:0' }, [zap, rota, rotaEscola, desistir]),
     ]);
     desistir.addEventListener('click', function () {
       if (!confirm('Devolver a carona de ' + c.nome + ' para a lista? Lembre de avisar a pessoa no WhatsApp.')) return;
@@ -665,7 +725,7 @@
   $('#data').textContent = [C.BAIRRO, C.DATA].filter(Boolean).join(' · ');
   $$('.apagar').forEach(function (s) { s.textContent = C.APAGAR_ATE || 'o fim da eleição'; });
   if (C.CONTATO) {
-    $$('.ajuda-contato').forEach(function (caixa) {
+    $$('.ajuda-contato:not([data-sempre])').forEach(function (caixa) {
       caixa.append(
         (caixa.dataset.texto || '📞 Prefere que alguém preencha por você? Chame a organização no WhatsApp:') + ' ',
         el('a', { href: 'https://wa.me/55' + digitos(C.CONTATO), target: '_blank', rel: 'noopener', text: telBonito(C.CONTATO) })
