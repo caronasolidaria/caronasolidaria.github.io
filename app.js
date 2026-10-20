@@ -68,7 +68,15 @@
       if (!r.ok) throw new Error('Falha na conexão (' + r.status + '). Tente de novo.');
       return r.json();
     }).then(function (j) {
-      if (!j.ok) throw new Error(j.erro || 'Erro desconhecido.');
+      if (!j.ok) {
+        // Só acontece se a organização ligar o código do grupo no Apps Script.
+        if (/código do grupo/i.test(j.erro || '')) {
+          esquecer('codigo');
+          guardar('pedeCodigo', true);
+          setTimeout(function () { if (!$('#v-motorista').hidden) telaMotorista(); });
+        }
+        throw new Error(j.erro || 'Erro desconhecido.');
+      }
       return j;
     }, function (e) {
       throw new Error(e.message && e.message.indexOf('Falha') === 0 ? e.message : 'Sem conexão. Verifique a internet e tente de novo.');
@@ -393,8 +401,14 @@
   }
 
   function telaMotorista() {
-    if (!lembrar('codigo')) return so('f-codigo');
-    if (!lembrar('perfil')) { $('#f-ja').hidden = true; return so('m-escolha'); }
+    if (lembrar('pedeCodigo') && !lembrar('codigo')) return so('f-codigo');
+    if (!lembrar('perfil')) {
+      $('#f-ja').hidden = true;
+      so('m-escolha');
+      // Descobre logo se a organização ligou o código, antes de a pessoa preencher o cadastro.
+      if (C.SCRIPT_URL) api('listar', { codigo: lembrar('codigo') }).catch(function () {});
+      return;
+    }
     so('painel');
     carregarPainel();
   }
@@ -488,7 +502,7 @@
     wOferecer.ir(0);
   });
   $('#b-sair').addEventListener('click', function () {
-    if (confirm('Sair deste aparelho? Para entrar de novo, você vai precisar do código do grupo e do seu WhatsApp.')) sair();
+    if (confirm('Sair deste aparelho? Para entrar de novo, use o seu WhatsApp.')) sair();
   });
   $('#b-atualizar').addEventListener('click', function () { carregarPainel(); });
 
@@ -509,8 +523,7 @@
       desenharMinhas(rs[1].caronas);
       desenharPedidos(rs[0]);
     }).catch(function (e) {
-      if (/código/i.test(e.message)) { sair(); return mensagem($('.erro-passo', $('#f-codigo')), 'erro', e.message); }
-      mensagem(aviso, 'erro', e.message);
+      if (!/código do grupo/i.test(e.message)) mensagem(aviso, 'erro', e.message);
     });
   }
 

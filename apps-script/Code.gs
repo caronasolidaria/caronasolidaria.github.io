@@ -8,8 +8,9 @@
  * Instalação: ver README.md do repositório.
  */
 
-// Código que você manda só para motoristas de confiança. TROQUE antes de implantar.
-const CODIGO_MOTORISTAS = 'troque-este-codigo';
+// Opcional: preencha para exigir um código dos motoristas (o site passa a pedir sozinho).
+// Vazio = qualquer pessoa com o link pode se cadastrar como motorista.
+const CODIGO_MOTORISTAS = '';
 
 const ABA = 'Pedidos';
 const COLUNAS = [
@@ -230,6 +231,7 @@ function liberar(id, whatsapp) {
 // ---------- utilitários ----------
 
 function exigirCodigo(req) {
+  if (!CODIGO_MOTORISTAS) return;
   if (String(req.codigo || '').trim().toLowerCase() !== CODIGO_MOTORISTAS.toLowerCase()) {
     throw new Error('Código do grupo incorreto.');
   }
