@@ -48,5 +48,5 @@ Por padrão, qualquer pessoa com o link pode se cadastrar como motorista. Para r
 
 ## Cuidados
 
-- **Não apague linhas** da planilha durante a operação (os números dos pedidos dependem disso). Para cancelar um pedido, escreva `cancelado` na coluna `status`. Para tirar um motorista, escreva `inativo`.
+- **Não apague linhas** da planilha durante a operação (os números dos pedidos dependem disso). A coluna `status` tem um menu de opções: para cancelar um pedido, escolha `cancelado`; para tirar um motorista, escolha `inativo`. Depois de levar a pessoa, marque o pedido como `realizado`.
 - Transporte de eleitores tem restrições legais (Lei nº 6.091/1974). O site traz avisos de que a iniciativa é apartidária e de que a organização só põe as pessoas em contato. Na dúvida, consulte o cartório eleitoral.

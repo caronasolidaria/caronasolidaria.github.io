@@ -487,6 +487,7 @@
         ];
         var dl = $('#p-resumo');
         preencherResumo(dl, linhas);
+        $('#p-zap-aviso').textContent = telBonito(d.whatsapp);
         dl.appendChild(el('p', { class: 'dica', style: 'margin:12px 0 0', text: 'Para corrigir algo, toque em Voltar.' }));
       }
     },

@@ -283,6 +283,7 @@
         <h2 tabindex="-1">Qual WhatsApp o motorista deve chamar?</h2>
         <label class="campo" for="p-whatsapp">WhatsApp com DDD <span class="dica">Pode ser o de um familiar</span></label>
         <input id="p-whatsapp" name="whatsapp" type="tel" inputmode="numeric" autocomplete="tel" placeholder="(84) 99999-9999">
+        <div class="msg aviso">📱 <strong>O motorista vai entrar em contato por este WhatsApp</strong> para combinar o horário. Confira se o número está certo.</div>
       </div>
 
       <div class="passo" data-step="mapa" hidden>
@@ -346,6 +347,7 @@
       <div class="passo" data-step="conferir" hidden>
         <h2 tabindex="-1">Confira e envie</h2>
         <div class="card"><dl class="resumo" id="p-resumo"></dl></div>
+        <div class="msg aviso">📱 <strong>O motorista vai entrar em contato pelo WhatsApp <span id="p-zap-aviso"></span></strong> para combinar o horário. Fique de olho no celular nos próximos dias.</div>
         <div class="opcoes">
           <label class="opcao-card"><input type="checkbox" name="consentimento"><span>Autorizo usar estes dados <strong>só para combinar a carona</strong><small>A carona é voluntária e não é garantida. Para a segurança de todos, os dados serão apagados em <span class="apagar"></span>.</small></span></label>
         </div>
@@ -363,7 +365,7 @@
     <div id="ok-pedir" hidden>
       <div class="msg ok"><h2 style="margin:0">✅ Pedido recebido!</h2></div>
       <p style="font-size:1.15rem">O número do pedido é <strong id="ok-id"></strong>. Anote, caso precise falar com a organização.</p>
-      <p>Quando um motorista aceitar, ele vai chamar no WhatsApp que você informou para combinar o horário.</p>
+      <div class="msg aviso">📱 <strong>Quando um motorista aceitar, ele vai entrar em contato pelo WhatsApp</strong> que você informou, para combinar o horário. Fique de olho no celular.</div>
       <div class="ajuda-contato" data-texto="Se até sábado à noite ninguém tiver chamado, fale com a organização:"></div>
       <a class="btn sec" href="#">Voltar ao início</a>
     </div>

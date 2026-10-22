@@ -35,6 +35,9 @@ const PUBLICOS = [
   'cadeira_rodas', 'andador', 'ajuda_entrar', 'acompanhante',
 ];
 const TURNOS = ['manha', 'tarde', 'tanto-faz'];
+// Valores permitidos na coluna status: viram um menu de opções na planilha.
+const STATUS_PEDIDO = ['aberto', 'combinado', 'realizado', 'cancelado'];
+const STATUS_MOTORISTA = ['ativo', 'inativo'];
 // Arredondamento das coordenadas, em graus. O mapa aberto a todos nunca mostra a casa:
 // ~0,004° ≈ 450 m. Na lista dos motoristas, ~0,0015° ≈ 170 m, só para estimar a distância.
 const GRADE_PUBLICA = 0.004;
@@ -43,12 +46,15 @@ const GRADE_MOTORISTA = 0.0015;
 /** Rode uma vez pelo editor para criar as abas e os cabeçalhos. */
 function setup() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  [[ABA, COLUNAS], [ABA_MOT, COLUNAS_MOT]].forEach(([nome, cols]) => {
+  [[ABA, COLUNAS, STATUS_PEDIDO], [ABA_MOT, COLUNAS_MOT, STATUS_MOTORISTA]].forEach(([nome, cols, status]) => {
     const aba = ss.getSheetByName(nome) || ss.insertSheet(nome);
     aba.getRange(1, 1, 1, cols.length).setValues([cols]).setFontWeight('bold');
     aba.setFrozenRows(1);
     // Tudo como texto: evita que telefone vire número e que a planilha interprete fórmulas.
     aba.getRange(1, 1, aba.getMaxRows(), cols.length).setNumberFormat('@');
+    // Coluna status com menu de opções: a planilha recusa qualquer outro valor.
+    const regra = SpreadsheetApp.newDataValidation().requireValueInList(status, true).setAllowInvalid(false).build();
+    aba.getRange(2, cols.indexOf('status') + 1, aba.getMaxRows() - 1, 1).setDataValidation(regra);
   });
   // Agenda a exclusão automática (na primeira vez, o Google pede uma permissão a mais).
   ScriptApp.getProjectTriggers()
