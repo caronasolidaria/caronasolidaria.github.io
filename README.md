@@ -4,7 +4,7 @@ Site simples para vizinhos com carro levarem vizinhos com dificuldade de locomo�
 
 **Site:** <https://caronasolidaria.github.io/>
 
-Criado por **Ricardo Silveira** ([@rsilveirafh](https://github.com/rsilveirafh)).
+Criado e organizado por **Ricardo Rodrigues** ([@rsilveirafh](https://github.com/rsilveirafh)). O contato da organização (WhatsApp) está no site.
 
 - **Site**: estático, no GitHub Pages (`index.html`, `app.js`, `config.js`).
 - **Dados**: uma planilha Google privada, acessada só pelo Apps Script em `apps-script/Code.gs`. **Nenhum dado pessoal fica neste repositório.**
@@ -29,7 +29,7 @@ A planilha é o painel da organização: aba `Pedidos` (quem pediu, quem assumiu
    - Executar como: **Eu**
    - Quem pode acessar: **Qualquer pessoa**
 5. Copie a URL que termina em `/exec` e coloque em `SCRIPT_URL` no `config.js`.
-6. No `config.js`, confira também `BAIRRO`, `CENTRO` do mapa e `CONTATO` (WhatsApp da organização, para o atalho "prefere que alguém preencha por você?").
+6. No `config.js`, confira também `BAIRRO`, `CENTRO` do mapa, `CONTATO` e `CONTATO_NOME` (WhatsApp e nome da organização, para o atalho "prefere que alguém preencha por você?" e para quem troca de celular).
 
 > Se mudar o `Code.gs` depois, cole a versão nova, rode `setup` de novo e use **Implantar → Gerenciar implantações → editar (lápis) → Versão: Nova versão**, para manter a mesma URL.
 

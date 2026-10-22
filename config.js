@@ -16,8 +16,9 @@ window.CONFIG = {
   ZOOM: 15,
   // Texto da data da votação.
   DATA: 'Domingo, 25 de outubro · 2º turno · das 8h às 17h',
-  // WhatsApp de quem organiza (DDD + número, só dígitos). Deixe vazio para não exibir.
-  CONTATO: '',
+  // WhatsApp e nome de quem organiza (DDD + número, só dígitos). Deixe vazio para não exibir.
+  CONTATO: '81996189993',
+  CONTATO_NOME: 'Ricardo Rodrigues',
   // Quando os dados são apagados (igual a APAGAR_EM no Code.gs).
   APAGAR_ATE: '26/10/2026, às 18h',
 };
