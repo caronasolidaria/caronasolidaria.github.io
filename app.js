@@ -814,6 +814,7 @@
   $$('input[type=tel]').forEach(function (i) { if (!i.placeholder) i.placeholder = exemploTel(); });
   $$('.regiao-titulo').forEach(function (s) { s.textContent = C.REGIAO_TITULO || 'região'; });
   $('#exemplos-locais').textContent = C.EXEMPLOS_LOCAIS || 'nome da escola';
+  if (C.REPOSITORIO) $('#credito').href = C.REPOSITORIO;
   $$('.apagar').forEach(function (s) { s.textContent = C.APAGAR_ATE || 'o fim da eleição'; });
   if (C.CONTATO) {
     // O número não aparece na tela: só um botão que abre a conversa.
