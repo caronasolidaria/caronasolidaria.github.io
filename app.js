@@ -103,7 +103,10 @@
 
   function novoMapa(div) {
     if (!window.L) { div.textContent = 'Não foi possível carregar o mapa. Você pode continuar sem ele.'; return null; }
-    var m = L.map(div, { scrollWheelZoom: false }).setView(C.CENTRO, C.ZOOM);
+    var m = L.map(div, { scrollWheelZoom: false });
+    // Enquadra a cidade inteira, qualquer que seja o tamanho da tela.
+    if (C.AREA_MAPA) m.fitBounds(C.AREA_MAPA);
+    else m.setView(C.CENTRO, C.ZOOM);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',

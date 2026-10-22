@@ -1,4 +1,4 @@
-# Carona Solidária · Vila de Ponta Negra
+# Carona Solidária · Natal
 
 Site simples para vizinhos com carro levarem vizinhos com dificuldade de locomoção (idosos, pessoas com deficiência) até o local de votação. Gratuito e apartidário.
 
