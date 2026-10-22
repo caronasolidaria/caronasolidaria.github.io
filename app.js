@@ -809,7 +809,7 @@
   $$('.apagar').forEach(function (s) { s.textContent = C.APAGAR_ATE || 'o fim da eleição'; });
   if (C.CONTATO) {
     // O número não aparece na tela: só um botão que abre a conversa.
-    var rotulo = '💬 Falar com ' + (C.CONTATO_NOME || 'a organização') + ' no WhatsApp';
+    var rotulo = '💬 Falar com ' + (C.CONTATO_NOME ? C.CONTATO_NOME.split(' ')[0] : 'a organização');
     $$('.ajuda-contato:not([data-sempre])').forEach(function (caixa) {
       caixa.append(
         el('p', { style: 'margin:0 0 10px', text: caixa.dataset.texto || '📞 Precisa de ajuda ou prefere que alguém preencha por você?' }),
