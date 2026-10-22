@@ -14,7 +14,7 @@ Criado por **Ricardo Silveira** ([@rsilveirafh](https://github.com/rsilveirafh))
 ## Como funciona
 
 1. Quem precisa de carona responde um passo a passo (uma pergunta por tela, letra grande), marca a casa no mapa e escolhe o local de votação na lista oficial.
-2. Motoristas voluntários fazem o próprio cadastro (carro, lugares, cadeira de rodas, de onde saem, horário) e veem os pedidos ordenados por distância, só com rua/bairro, local de votação, horário e necessidades.
+2. Motoristas voluntários fazem o próprio cadastro (carro, lugares, cadeira de rodas, de onde saem, horário). O cadastro fica **pendente** até a organização aprovar. Aprovado, o motorista vê os pedidos ordenados por distância, só com rua/bairro, local de votação, horário e necessidades.
 3. Ao tocar em "Eu levo", o pedido sai da lista e só esse motorista vê nome, WhatsApp e endereço, com botões para chamar no WhatsApp, ir até a casa e seguir até o local de votação.
 4. O mapa da página inicial mostra só a **região aproximada** (~450 m) de pedidos e motoristas. Os locais de votação, que são prédios públicos, aparecem na posição exata.
 
@@ -42,9 +42,30 @@ Para a segurança de todos, **os dados são apagados sozinhos em 26/10/2026, às
 
 O Google Planilhas guarda um **histórico de versões**. Para apagar de vez, depois do prazo, exclua o arquivo da planilha e esvazie a lixeira do Google Drive.
 
+## Aprovação dos motoristas (organização)
+
+1. Na aba `Motoristas`, cada cadastro novo chega com `status` = `pendente`.
+2. Confira a pessoa (nome, WhatsApp, carro) e escolha `ativo` no menu da coluna `status`. Ela passa a ver os pedidos ao tocar em **Atualizar** no site.
+3. Para tirar alguém, escolha `inativo`.
+4. **Motorista trocou de celular?** Por segurança, o acesso fica só no aparelho do cadastro. Apague a célula `token` dele: ele se cadastra de novo no celular novo, com o mesmo WhatsApp, e continua aprovado.
+
+Para dividir a verificação com outras pessoas, compartilhe a planilha com elas como **editoras**. Elas passam a ver todos os dados: só pessoas de confiança da organização.
+
+## Segurança
+
+A URL do Apps Script fica no código do site (como em qualquer site), então todas as proteções estão no `Code.gs`:
+
+- **Pedidos**: qualquer pessoa pode pedir carona, mas ninguém consegue ler os pedidos sem ser motorista aprovado.
+- **Motoristas**: cada um recebe no cadastro uma senha secreta (`token`), guardada só no celular dele e exigida em todas as ações. Saber o WhatsApp de alguém não dá acesso a nada; não dá para recadastrar o WhatsApp de outra pessoa.
+- **Antes de assumir**, o motorista vê só rua/bairro, local de votação, horário e necessidades. Nome, telefone e endereço completo só aparecem para quem assumiu.
+- **Limites**: até 4 caronas combinadas por motorista; até 2 pedidos esperando motorista por WhatsApp; até 60 pedidos e 30 cadastros de motorista por hora (contra robôs).
+- **Mapa aberto**: só contagens em regiões de ~450 m; nenhum nome, telefone ou endereço.
+- **Planilha**: valores gravados como texto (nada vira fórmula; coordenadas não são corrompidas pela planilha em português).
+- A busca de endereços envia o texto digitado ao OpenStreetMap (Nominatim).
+
 ## Código do grupo (opcional)
 
-Por padrão, qualquer pessoa com o link pode se cadastrar como motorista. Para restringir, preencha `CODIGO_MOTORISTAS` no `Code.gs` e publique uma nova versão: o site passa a pedir o código antes do cadastro, sem mudar nada no site.
+Por padrão, qualquer pessoa com o link pode se cadastrar como motorista (e espera a aprovação). Para restringir também o cadastro, preencha `CODIGO_MOTORISTAS` no `Code.gs` e publique uma nova versão: o site passa a pedir o código antes do cadastro, sem mudar nada no site.
 
 ## Cuidados
 

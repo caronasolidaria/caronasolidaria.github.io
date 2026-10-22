@@ -387,17 +387,14 @@
     </form>
 
     <div id="m-escolha" hidden>
-      <h2 tabindex="-1">Você já se cadastrou como motorista?</h2>
+      <h2 tabindex="-1">Posso dar carona</h2>
+      <div id="m-escolha-aviso"></div>
+      <p>Faça um cadastro rápido. <strong>A organização confere cada motorista</strong> e libera o seu acesso aos pedidos. É para proteger as pessoas que pediram carona.</p>
       <div class="pilha">
-        <button type="button" class="btn-grande" id="b-cadastrar"><span class="ico" aria-hidden="true">📝</span><span><strong>Primeira vez</strong><small>Quero me cadastrar</small></span></button>
-        <button type="button" class="btn-grande sec" id="b-ja"><span class="ico" aria-hidden="true">👋</span><span><strong>Já me cadastrei</strong><small>Entrar com meu WhatsApp</small></span></button>
+        <button type="button" class="btn-grande" id="b-cadastrar"><span class="ico" aria-hidden="true">📝</span><span><strong>Fazer meu cadastro</strong><small>Leva uns 2 minutos</small></span></button>
       </div>
-      <form id="f-ja" hidden novalidate>
-        <label class="campo" for="m-ja-tel">Seu WhatsApp com DDD</label>
-        <input id="m-ja-tel" type="tel" inputmode="numeric" autocomplete="tel" placeholder="(84) 99999-9999">
-        <div class="erro-passo" aria-live="assertive"></div>
-        <button class="btn" type="submit" style="margin-top:16px">Entrar</button>
-      </form>
+      <p class="dica">Já se cadastrou em outro celular? Por segurança, o acesso fica só no aparelho onde você se cadastrou. Fale com a organização.</p>
+      <div class="ajuda-contato"></div>
     </div>
 
     <form id="f-oferecer" hidden novalidate>
@@ -483,11 +480,13 @@
       </div>
       <div id="m-painel" aria-live="polite"></div>
       <div id="minhas"></div>
-      <h2>Pedidos esperando motorista</h2>
-      <div id="mapa-motorista" class="mapa alto" role="img" aria-label="Mapa com os pedidos esperando motorista"></div>
-      <div class="legenda" aria-hidden="true"><span>🙋 Pedido (região aproximada)</span><span>🗳️ Local de votação</span><span>🚗 Você</span></div>
-      <p class="dica">Toque num 🙋 para ver o pedido na lista.</p>
-      <div id="lista"></div>
+      <div id="area-pedidos" hidden>
+        <h2>Pedidos esperando motorista</h2>
+        <div id="mapa-motorista" class="mapa alto" role="img" aria-label="Mapa com os pedidos esperando motorista"></div>
+        <div class="legenda" aria-hidden="true"><span>🙋 Pedido (região aproximada)</span><span>🗳️ Local de votação</span><span>🚗 Você</span></div>
+        <p class="dica">Toque num 🙋 para ver o pedido na lista.</p>
+        <div id="lista"></div>
+      </div>
     </div>
   </section>
 

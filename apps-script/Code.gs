@@ -2,14 +2,20 @@
  * Carona Solidária — backend em Google Apps Script.
  *
  * A planilha onde este script está "colado" é o banco de dados e também o painel
- * do coordenador. O site (GitHub Pages) só fala com este script; ninguém lê a
+ * da organização. O site (GitHub Pages) só fala com este script; ninguém lê a
  * planilha diretamente.
+ *
+ * Segurança (a URL deste script é pública, então toda proteção mora aqui):
+ * - motoristas novos ficam "pendente" até a organização mudar para "ativo" na planilha;
+ * - cada motorista recebe uma senha secreta (token), guardada só no celular dele,
+ *   exigida para ver a lista, assumir, ver as próprias caronas, devolver e editar;
+ * - limites de envio contra robôs; nada de dado pessoal no mapa aberto.
  *
  * Instalação: ver README.md do repositório.
  */
 
 // Opcional: preencha para exigir um código dos motoristas (o site passa a pedir sozinho).
-// Vazio = qualquer pessoa com o link pode se cadastrar como motorista.
+// Vazio = qualquer pessoa com o link pode se cadastrar (e espera a aprovação da organização).
 const CODIGO_MOTORISTAS = '';
 
 // Para a segurança de todos, os dados são apagados sozinhos neste momento (horário de Natal).
@@ -27,9 +33,9 @@ const COLUNAS = [
 const ABA_MOT = 'Motoristas';
 const COLUNAS_MOT = [
   'id', 'criado_em', 'status', 'nome', 'whatsapp', 'carro', 'lugares', 'cadeira_ok',
-  'turno', 'regiao', 'lat', 'lng',
+  'turno', 'regiao', 'lat', 'lng', 'token',
 ];
-// Campos que qualquer motorista com o código vê ANTES de assumir a carona.
+// Campos que um motorista aprovado vê ANTES de assumir a carona.
 const PUBLICOS = [
   'id', 'status', 'regiao', 'local_votacao', 'turno', 'volta',
   'cadeira_rodas', 'andador', 'ajuda_entrar', 'acompanhante',
@@ -37,13 +43,18 @@ const PUBLICOS = [
 const TURNOS = ['manha', 'tarde', 'tanto-faz'];
 // Valores permitidos na coluna status: viram um menu de opções na planilha.
 const STATUS_PEDIDO = ['aberto', 'combinado', 'realizado', 'cancelado'];
-const STATUS_MOTORISTA = ['ativo', 'inativo'];
+const STATUS_MOTORISTA = ['pendente', 'ativo', 'inativo'];
 // Arredondamento das coordenadas, em graus. O mapa aberto a todos nunca mostra a casa:
 // ~0,004° ≈ 450 m. Na lista dos motoristas, ~0,0015° ≈ 170 m, só para estimar a distância.
 const GRADE_PUBLICA = 0.004;
 const GRADE_MOTORISTA = 0.0015;
+// Limites contra abuso.
+const MAX_CARONAS_POR_MOTORISTA = 4;
+const MAX_PEDIDOS_ABERTOS_POR_WHATSAPP = 2;
+const MAX_PEDIDOS_POR_HORA = 60;
+const MAX_CADASTROS_POR_HORA = 30;
 
-/** Rode uma vez pelo editor para criar as abas e os cabeçalhos. */
+/** Rode pelo editor depois de colar uma versão nova: cria abas, cabeçalhos, menus e o agendamento. */
 function setup() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   [[ABA, COLUNAS, STATUS_PEDIDO], [ABA_MOT, COLUNAS_MOT, STATUS_MOTORISTA]].forEach(([nome, cols, status]) => {
@@ -93,10 +104,10 @@ function doPost(e) {
       case 'pedir': return json(pedir(req.dados || {}));
       case 'mapa': return json(mapa());
       case 'oferecer': exigirCodigo(req); return json(oferecer(req.dados || {}));
-      case 'listar': exigirCodigo(req); return json(listar());
-      case 'assumir': exigirCodigo(req); return json(assumir(req.id, req.whatsapp));
-      case 'minhas': exigirCodigo(req); return json(minhas(req.whatsapp));
-      case 'liberar': exigirCodigo(req); return json(liberar(req.id, req.whatsapp));
+      case 'listar': exigirCodigo(req); return json(listar(autenticar(req, true)));
+      case 'assumir': exigirCodigo(req); return json(assumir(req.id, autenticar(req, true)));
+      case 'minhas': exigirCodigo(req); return json(minhas(autenticar(req, false)));
+      case 'liberar': exigirCodigo(req); return json(liberar(req.id, autenticar(req, false)));
       default: return json({ ok: false, erro: 'Ação desconhecida.' });
     }
   } catch (err) {
@@ -126,15 +137,21 @@ function pedir(d) {
   if (d.consentimento !== true) throw new Error('É preciso aceitar o uso dos dados.');
 
   return comTrava(() => {
+    limitar('pedidos', MAX_PEDIDOS_POR_HORA);
     const aba = planilha(ABA);
+    const abertos = ler(aba, COLUNAS).filter(l => l.whatsapp === p.whatsapp && l.status === 'aberto').length;
+    if (abertos >= MAX_PEDIDOS_ABERTOS_POR_WHATSAPP) {
+      throw new Error('Já existem ' + abertos + ' pedidos esperando motorista com este WhatsApp. Para mudar algo, fale com a organização.');
+    }
     p.id = novoId(aba, 'C');
     p.criado_em = agora();
     p.status = 'aberto';
-    aba.appendRow(COLUNAS.map(c => seguro(p[c] || '')));
+    aba.appendRow(COLUNAS.map(c => celula(c, p[c])));
     return { ok: true, id: p.id };
   });
 }
 
+/** Cadastro novo (fica pendente) ou edição do próprio cadastro (exige o token). */
 function oferecer(d) {
   const m = Object.assign({
     nome: texto(d.nome, 80, true, 'nome'),
@@ -151,17 +168,22 @@ function oferecer(d) {
     const aba = planilha(ABA_MOT);
     const existente = ler(aba, COLUNAS_MOT).find(x => x.whatsapp === m.whatsapp);
     if (existente) {
-      // Mesmo WhatsApp: atualiza o cadastro em vez de duplicar.
-      m.id = existente.id;
-      m.criado_em = existente.criado_em;
-      m.status = 'ativo';
+      // Token em branco = a organização liberou um novo aparelho (troca de celular).
+      if (existente.token && String(d.token || '') !== existente.token) {
+        throw new Error('Este WhatsApp já tem cadastro de motorista. Se você trocou de celular, fale com a organização.');
+      }
+      // A edição não muda id, data nem status (quem aprova é a organização).
+      ['id', 'criado_em', 'status'].forEach(c => { m[c] = existente[c]; });
+      m.token = existente.token || Utilities.getUuid().replace(/-/g, '');
       aba.getRange(existente._linha, 1, 1, COLUNAS_MOT.length)
-        .setValues([COLUNAS_MOT.map(c => seguro(m[c] || ''))]);
+        .setValues([COLUNAS_MOT.map(c => celula(c, m[c]))]);
     } else {
+      limitar('cadastros', MAX_CADASTROS_POR_HORA);
       m.id = novoId(aba, 'M');
       m.criado_em = agora();
-      m.status = 'ativo';
-      aba.appendRow(COLUNAS_MOT.map(c => seguro(m[c] || '')));
+      m.status = 'pendente';
+      m.token = Utilities.getUuid().replace(/-/g, '');
+      aba.appendRow(COLUNAS_MOT.map(c => celula(c, m[c])));
     }
     return { ok: true, motorista: m };
   });
@@ -177,7 +199,7 @@ function mapa() {
   const totais = { pedidos: 0, combinados: 0, motoristas: 0 };
   function somar(l, tipo) {
     totais[tipo]++;
-    if (!l.lat || !l.lng) return;
+    if (!coordValida(l.lat, l.lng)) return;
     const lat = arredondar(l.lat, GRADE_PUBLICA);
     const lng = arredondar(l.lng, GRADE_PUBLICA);
     const k = lat + ',' + lng;
@@ -188,9 +210,10 @@ function mapa() {
     const ativo = l.status === 'aberto' || l.status === 'combinado' || l.status === 'realizado';
     if (l.status === 'aberto') somar(l, 'pedidos');
     else if (ativo) somar(l, 'combinados');
-    if (ativo && l.local_lat && l.local_lng) {
+    if (ativo && coordValida(l.local_lat, l.local_lng)) {
       const k = l.local_lat + ',' + l.local_lng;
-      locais[k] = locais[k] || { nome: l.local_votacao, lat: Number(l.local_lat), lng: Number(l.local_lng), pessoas: 0 };
+      // Só o nome do local (antes do endereço entre parênteses), sem nada do pedido.
+      locais[k] = locais[k] || { nome: l.local_votacao.split(' (')[0].slice(0, 100), lat: Number(l.local_lat), lng: Number(l.local_lng), pessoas: 0 };
       locais[k].pessoas++;
     }
   });
@@ -210,11 +233,11 @@ function listar() {
   const abertos = linhas.filter(l => l.status === 'aberto').map(l => {
     const o = {};
     PUBLICOS.forEach(c => { o[c] = l[c]; });
-    if (l.lat && l.lng) {
+    if (coordValida(l.lat, l.lng)) {
       o.lat = arredondar(l.lat, GRADE_MOTORISTA);
       o.lng = arredondar(l.lng, GRADE_MOTORISTA);
     }
-    if (l.local_lat && l.local_lng) {
+    if (coordValida(l.local_lat, l.local_lng)) {
       o.local_lat = Number(l.local_lat);
       o.local_lng = Number(l.local_lng);
     }
@@ -227,13 +250,15 @@ function listar() {
   };
 }
 
-function assumir(id, whatsapp) {
-  const mot = acharMotorista(telefone(whatsapp));
-  if (!mot) throw new Error('Faça seu cadastro de motorista antes de assumir uma carona.');
-
+function assumir(id, mot) {
   return comTrava(() => {
     const aba = planilha(ABA);
-    const l = ler(aba, COLUNAS).find(x => x.id === String(id));
+    const linhas = ler(aba, COLUNAS);
+    const minhasAgora = linhas.filter(x => x.status === 'combinado' && x.motorista_whatsapp === mot.whatsapp).length;
+    if (minhasAgora >= MAX_CARONAS_POR_MOTORISTA) {
+      throw new Error('Você já tem ' + minhasAgora + ' caronas combinadas, o máximo por motorista. Se puder levar mais, fale com a organização.');
+    }
+    const l = linhas.find(x => x.id === String(id));
     if (!l) throw new Error('Pedido não encontrado.');
     if (l.status !== 'aberto') throw new Error('Outra pessoa já assumiu essa carona. Atualize a lista.');
     const mudar = {
@@ -244,27 +269,24 @@ function assumir(id, whatsapp) {
       combinado_em: agora(),
     };
     Object.keys(mudar).forEach(c => {
-      aba.getRange(l._linha, COLUNAS.indexOf(c) + 1).setValue(seguro(mudar[c]));
+      aba.getRange(l._linha, COLUNAS.indexOf(c) + 1).setValue(celula(c, mudar[c]));
     });
     return { ok: true, carona: limpo(Object.assign(l, mudar)) };
   });
 }
 
-function minhas(whatsapp) {
-  const tel = telefone(whatsapp);
-  const mot = acharMotorista(tel);
+function minhas(mot) {
   const caronas = ler(planilha(ABA), COLUNAS)
-    .filter(l => l.status === 'combinado' && l.motorista_whatsapp === tel)
+    .filter(l => l.status === 'combinado' && l.motorista_whatsapp === mot.whatsapp)
     .map(limpo);
-  return { ok: true, motorista: mot ? limpo(mot) : null, caronas: caronas };
+  return { ok: true, motorista: limpo(mot), caronas: caronas };
 }
 
-function liberar(id, whatsapp) {
-  const tel = telefone(whatsapp);
+function liberar(id, mot) {
   return comTrava(() => {
     const aba = planilha(ABA);
     const l = ler(aba, COLUNAS).find(x => x.id === String(id));
-    if (!l || l.status !== 'combinado' || l.motorista_whatsapp !== tel) {
+    if (!l || l.status !== 'combinado' || l.motorista_whatsapp !== mot.whatsapp) {
       throw new Error('Essa carona não está com você.');
     }
     ['motorista_nome', 'motorista_whatsapp', 'motorista_carro', 'combinado_em'].forEach(c => {
@@ -282,6 +304,32 @@ function exigirCodigo(req) {
   if (String(req.codigo || '').trim().toLowerCase() !== CODIGO_MOTORISTAS.toLowerCase()) {
     throw new Error('Código do grupo incorreto.');
   }
+}
+
+/** Confere WhatsApp + token do motorista. Com exigirAtivo, só passa quem a organização aprovou. */
+function autenticar(req, exigirAtivo) {
+  const tel = String(req.whatsapp || '').replace(/\D/g, '');
+  const token = String(req.token || '');
+  const mot = tel && ler(planilha(ABA_MOT), COLUNAS_MOT).find(x => x.whatsapp === tel);
+  if (!mot || !mot.token || !token || token !== mot.token) {
+    throw new Error('Cadastro de motorista não encontrado neste aparelho. Se você trocou de celular, fale com a organização.');
+  }
+  if (exigirAtivo && mot.status === 'pendente') {
+    throw new Error('Seu cadastro está esperando a aprovação da organização. Volte daqui a pouco e toque em Atualizar.');
+  }
+  if (exigirAtivo && mot.status !== 'ativo') {
+    throw new Error('Seu cadastro de motorista está desativado. Fale com a organização.');
+  }
+  return mot;
+}
+
+/** Conta envios na última hora (aproximado) e recusa acima do limite. */
+function limitar(chave, max) {
+  const cache = CacheService.getScriptCache();
+  const k = 'limite-' + chave + '-' + Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'yyyyMMddHH');
+  const n = Number(cache.get(k) || 0) + 1;
+  if (n > max) throw new Error('Muitos envios agora. Tente de novo daqui a pouco.');
+  cache.put(k, String(n), 3600);
 }
 
 function comTrava(fn) {
@@ -309,10 +357,6 @@ function ler(aba, colunas) {
     colunas.forEach((c, j) => { o[c] = v[j]; });
     return o;
   });
-}
-
-function acharMotorista(tel) {
-  return ler(planilha(ABA_MOT), COLUNAS_MOT).find(x => x.whatsapp === tel && x.status === 'ativo') || null;
 }
 
 function limpo(l) {
@@ -346,6 +390,11 @@ function coordenadas(d) {
   return ok ? { lat: lat.toFixed(5), lng: lng.toFixed(5) } : { lat: '', lng: '' };
 }
 
+function coordValida(lat, lng) {
+  const a = Number(lat), b = Number(lng);
+  return lat !== '' && lng !== '' && isFinite(a) && isFinite(b) && Math.abs(a) <= 90 && Math.abs(b) <= 180;
+}
+
 function localDeVotacao(d) {
   const c = coordenadas({ lat: d.local_lat, lng: d.local_lng });
   return { local_lat: c.lat, local_lng: c.lng };
@@ -359,11 +408,14 @@ function simNao(v) {
   return v === true ? 'sim' : 'nao';
 }
 
-// Impede que um valor começando com = + - @ vire fórmula na planilha.
-// Números puros (coordenadas negativas) passam direto.
-function seguro(v) {
-  const s = String(v);
-  return /^[=+\-@]/.test(s) && !/^-?\d+(\.\d+)?$/.test(s) ? "'" + s : s;
+/**
+ * Valor pronto para a planilha. O apóstrofo na frente força texto: impede fórmulas
+ * (= + - @) e impede que a planilha em português leia "-5.88" como -588 ou "22/10" como data.
+ * A planilha não mostra o apóstrofo. A coluna status fica sem ele, por causa do menu.
+ */
+function celula(coluna, v) {
+  const s = v == null ? '' : String(v);
+  return s === '' || coluna === 'status' ? s : "'" + s;
 }
 
 function agora() {

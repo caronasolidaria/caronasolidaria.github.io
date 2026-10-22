@@ -519,10 +519,15 @@
     window.scrollTo(0, 0);
   }
 
+  /** Identificação do motorista em cada chamada: WhatsApp + senha secreta guardada só neste aparelho. */
+  function credenciais(extra) {
+    var p = lembrar('perfil') || {};
+    return Object.assign({ codigo: lembrar('codigo'), whatsapp: p.whatsapp, token: p.token }, extra || {});
+  }
+
   function telaMotorista() {
     if (lembrar('pedeCodigo') && !lembrar('codigo')) return so('f-codigo');
     if (!lembrar('perfil')) {
-      $('#f-ja').hidden = true;
       so('m-escolha');
       // Descobre logo se a organização ligou o código, antes de a pessoa preencher o cadastro.
       if (C.SCRIPT_URL) api('listar', { codigo: lembrar('codigo') }).catch(function () {});
@@ -545,36 +550,24 @@
     if (!codigo) return mensagem(caixa, 'erro', 'Digite o código do grupo.');
     var botao = $('button[type=submit]', f);
     ocupado(botao, true);
-    api('listar', { codigo: codigo }).then(function () {
+    // Sem cadastro a lista recusa de qualquer jeito; aqui só importa se o código passou.
+    function aceitar() {
       guardar('codigo', codigo);
       mensagem(caixa, '', '');
       telaMotorista();
-    }).catch(function (err) { mensagem(caixa, 'erro', err.message); })
-      .then(function () { ocupado(botao, false); });
+    }
+    api('listar', { codigo: codigo }).then(aceitar).catch(function (err) {
+      if (/código do grupo/i.test(err.message)) mensagem(caixa, 'erro', err.message);
+      else aceitar();
+    }).then(function () { ocupado(botao, false); });
   });
 
   $('#b-cadastrar').addEventListener('click', function () {
     $('#f-oferecer').reset();
+    $('#o-whatsapp').readOnly = false;
     selOferecer.limpar();
     so('f-oferecer');
     wOferecer.ir(0);
-  });
-  $('#b-ja').addEventListener('click', function () {
-    $('#f-ja').hidden = false;
-    $('#m-ja-tel').focus();
-  });
-  $('#f-ja').addEventListener('submit', function (e) {
-    e.preventDefault();
-    var f = e.target, tel = $('#m-ja-tel').value, caixa = $('.erro-passo', f);
-    if (!telValido(tel)) return mensagem(caixa, 'erro', 'Confira o WhatsApp: precisa ter o DDD e o número.');
-    var botao = $('button', f);
-    ocupado(botao, true);
-    api('minhas', { codigo: lembrar('codigo'), whatsapp: tel }).then(function (r) {
-      if (!r.motorista) return mensagem(caixa, 'erro', 'Não achamos cadastro com esse WhatsApp. Toque em "Primeira vez" para se cadastrar.');
-      guardar('perfil', r.motorista);
-      telaMotorista();
-    }).catch(function (err) { mensagem(caixa, 'erro', err.message); })
-      .then(function () { ocupado(botao, false); });
   });
 
   var wOferecer = wizard($('#f-oferecer'), {
@@ -593,13 +586,12 @@
         nome: f.nome.value, whatsapp: f.whatsapp.value, carro: f.carro.value, lugares: valor(f, 'lugares'),
         cadeira_ok: valor(f, 'cadeira_ok') === 'sim', turno: valor(f, 'turno'), regiao: f.regiao.value,
         compromisso: f.compromisso.checked, lat: selOferecer.lat, lng: selOferecer.lng,
+        token: (lembrar('perfil') || {}).token,
       };
       return api('oferecer', { codigo: lembrar('codigo'), dados: dados }).then(function (r) {
         guardar('perfil', r.motorista);
         so('painel');
-        return carregarPainel().then(function () {
-          mensagem($('#m-painel'), 'ok', 'Cadastro salvo! Agora escolha abaixo quem você pode levar.');
-        });
+        return carregarPainel();
       });
     },
   });
@@ -609,6 +601,8 @@
     f.reset();
     f.nome.value = p.nome || '';
     f.whatsapp.value = telBonito(p.whatsapp);
+    // O WhatsApp identifica o cadastro: para trocar de número, só com a organização.
+    f.whatsapp.readOnly = true;
     f.carro.value = p.carro || '';
     f.regiao.value = p.regiao || '';
     $$('input[type=radio]', f).forEach(function (r) {
@@ -621,7 +615,7 @@
     wOferecer.ir(0);
   });
   $('#b-sair').addEventListener('click', function () {
-    if (confirm('Sair deste aparelho? Para entrar de novo, use o seu WhatsApp.')) sair();
+    if (confirm('Sair deste aparelho? Por segurança, para entrar de novo você vai precisar falar com a organização.')) sair();
   });
   $('#b-atualizar').addEventListener('click', function () { carregarPainel(); });
 
@@ -631,18 +625,33 @@
     var perfil = lembrar('perfil') || {};
     $('#ola').textContent = 'Olá, ' + (perfil.nome || 'motorista') + '! 👋';
     var aviso = $('#m-painel');
-    mensagem(aviso, 'aviso', 'Carregando os pedidos…');
-    var codigo = lembrar('codigo');
-    return Promise.all([
-      api('listar', { codigo: codigo }),
-      api('minhas', { codigo: codigo, whatsapp: perfil.whatsapp }),
-    ]).then(function (rs) {
-      mensagem(aviso, '', '');
-      if (rs[1].motorista) guardar('perfil', rs[1].motorista);
-      desenharMinhas(rs[1].caronas);
-      desenharPedidos(rs[0]);
+    mensagem(aviso, 'aviso', 'Carregando…');
+    return api('minhas', credenciais()).then(function (r) {
+      guardar('perfil', r.motorista);
+      $('#ola').textContent = 'Olá, ' + r.motorista.nome + '! 👋';
+      desenharMinhas(r.caronas);
+      if (r.motorista.status === 'pendente') {
+        $('#area-pedidos').hidden = true;
+        return mensagem(aviso, 'aviso', '⏳ Cadastro recebido! A organização vai conferir e liberar o seu acesso aos pedidos. Volte aqui daqui a pouco e toque em Atualizar.');
+      }
+      if (r.motorista.status !== 'ativo') {
+        $('#area-pedidos').hidden = true;
+        return mensagem(aviso, 'erro', 'Seu cadastro de motorista está desativado. Fale com a organização.');
+      }
+      return api('listar', credenciais()).then(function (lista) {
+        mensagem(aviso, '', '');
+        $('#area-pedidos').hidden = false;
+        desenharPedidos(lista);
+      });
     }).catch(function (e) {
-      if (!/código do grupo/i.test(e.message)) mensagem(aviso, 'erro', e.message);
+      if (/código do grupo/i.test(e.message)) return;
+      if (/não encontrado neste aparelho/i.test(e.message)) {
+        // Cadastro apagado ou senha inválida: volta para a tela inicial do motorista.
+        esquecer('perfil');
+        so('m-escolha');
+        return mensagem($('#m-escolha-aviso'), 'erro', e.message);
+      }
+      mensagem(aviso, 'erro', e.message);
     });
   }
 
@@ -725,7 +734,7 @@
     sim.addEventListener('click', function () {
       ocupado(sim, true);
       var perfil = lembrar('perfil') || {};
-      api('assumir', { codigo: lembrar('codigo'), id: p.id, whatsapp: perfil.whatsapp }).then(function () {
+      api('assumir', credenciais({ id: p.id })).then(function () {
         return carregarPainel().then(function () {
           mensagem($('#m-painel'), 'ok', '✅ Carona combinada! Chame a pessoa no WhatsApp para acertar o horário.');
           window.scrollTo(0, 0);
@@ -784,7 +793,7 @@
     desistir.addEventListener('click', function () {
       if (!confirm('Devolver a carona de ' + c.nome + ' para a lista? Lembre de avisar a pessoa no WhatsApp.')) return;
       ocupado(desistir, true);
-      api('liberar', { codigo: lembrar('codigo'), id: c.id, whatsapp: c.motorista_whatsapp }).then(function () {
+      api('liberar', credenciais({ id: c.id })).then(function () {
         return carregarPainel();
       }).catch(function (e) {
         alert(e.message);
