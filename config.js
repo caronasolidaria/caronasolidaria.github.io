@@ -11,6 +11,11 @@ window.CONFIG = {
   // Ceará-Mirim, São José de Mipibu e Nísia Floresta.
   REGIAO: [-35.65, -5.45, -34.95, -6.25],
   REGIAO_NOME: 'na Grande Natal',
+  REGIAO_TITULO: 'Grande Natal',
+  // DDD usado nos exemplos de telefone.
+  DDD: '84',
+  // Exemplos de nomes de locais de votação (passo "Onde vota?").
+  EXEMPLOS_LOCAIS: 'Nassau, Jerônimo, Josefa Botelho',
   // Área que o mapa mostra ao abrir: [[sul, oeste], [norte, leste]]. Aqui, Natal inteira.
   AREA_MAPA: [[-5.9002, -35.2912], [-5.7027, -35.1531]],
   // Centro da cidade: ordena os locais de votação por proximidade (e serve de reserva ao mapa).

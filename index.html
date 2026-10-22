@@ -288,7 +288,7 @@
       <div class="passo" data-step="whatsapp" hidden>
         <h2 tabindex="-1">Qual WhatsApp o motorista deve chamar?</h2>
         <label class="campo" for="p-whatsapp">WhatsApp com DDD <span class="dica">Pode ser o de um familiar</span></label>
-        <input id="p-whatsapp" name="whatsapp" type="tel" inputmode="numeric" autocomplete="tel" placeholder="(84) 99999-9999">
+        <input id="p-whatsapp" name="whatsapp" type="tel" inputmode="numeric" autocomplete="tel" placeholder="">
         <div class="msg aviso">📱 <strong>O motorista vai entrar em contato por este WhatsApp</strong> para combinar o horário. Confira se o número está certo.</div>
       </div>
 
@@ -302,7 +302,7 @@
       <div class="passo" data-step="endereco" hidden>
         <h2 tabindex="-1">Qual é o endereço?</h2>
         <label class="campo" for="p-regiao">Rua e bairro <span class="dica">Os motoristas veem só isto antes de aceitar</span></label>
-        <input id="p-regiao" name="regiao" type="text" maxlength="80" placeholder="Rua das Flores, Lagoa Nova">
+        <input id="p-regiao" name="regiao" type="text" maxlength="80" placeholder="Rua das Flores, Centro">
         <label class="campo" for="p-numero">Número e complemento <span class="dica">Só o motorista que aceitar vai ver. Sem número? Escreva s/n.</span></label>
         <input id="p-numero" name="numero" type="text" maxlength="60" placeholder="123, casa B">
         <label class="campo" for="p-ref">Ponto de referência <span class="dica">Não é obrigatório</span></label>
@@ -311,10 +311,10 @@
 
       <div class="passo" data-step="escola" hidden>
         <h2 tabindex="-1">Onde vota?</h2>
-        <label class="campo" for="p-local">Comece a digitar o nome do local <span class="dica">Ex.: Nassau, Jerônimo, Josefa Botelho</span></label>
+        <label class="campo" for="p-local">Comece a digitar o nome do local <span class="dica">Ex.: <span id="exemplos-locais"></span></span></label>
         <input id="p-local" name="local_votacao" type="text" maxlength="200" autocomplete="off">
         <div id="sugestoes" class="sugestoes" aria-live="polite"></div>
-        <p class="opcional" style="margin-top:12px">A lista é a oficial do TSE para a Grande Natal. Se o seu local não aparecer, use o botão abaixo para procurar no mapa.</p>
+        <p class="opcional" style="margin-top:12px">A lista é a oficial do TSE para a <span class="regiao-titulo"></span>. Se o seu local não aparecer, use o botão abaixo para procurar no mapa.</p>
         <div class="seletor" id="seletor-escola"></div>
         <div class="ajuda-contato" data-sempre>
           <strong>Não sabe onde vota?</strong> Veja no aplicativo <em>e-Título</em>, em "Onde votar", ou no
@@ -416,7 +416,7 @@
       <div class="passo" data-step="whatsapp" hidden>
         <h2 tabindex="-1">Qual é o seu WhatsApp?</h2>
         <label class="campo" for="o-whatsapp">WhatsApp com DDD <span class="dica">Também serve para você entrar de novo depois</span></label>
-        <input id="o-whatsapp" name="whatsapp" type="tel" inputmode="numeric" autocomplete="tel" placeholder="(84) 99999-9999">
+        <input id="o-whatsapp" name="whatsapp" type="tel" inputmode="numeric" autocomplete="tel" placeholder="">
       </div>
 
       <div class="passo" data-step="carro" hidden>

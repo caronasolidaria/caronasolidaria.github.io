@@ -56,6 +56,8 @@ const MAX_CADASTROS_POR_HORA = 30;
 // Avisos por e-mail para a dona/o dono da planilha. Sem nome, telefone ou endereço:
 // o e-mail fica guardado depois que os dados forem apagados.
 const AVISAR_POR_EMAIL = true;
+// Cidade no assunto dos e-mails (útil com uma planilha por cidade).
+const NOME_CIDADE = 'Natal';
 
 /** Rode pelo editor depois de colar uma versão nova: cria abas, cabeçalhos, menus e o agendamento. */
 function setup() {
@@ -348,7 +350,7 @@ function avisar(assunto, texto) {
   if (!AVISAR_POR_EMAIL) return;
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    MailApp.sendEmail(Session.getEffectiveUser().getEmail(), '[Carona Solidária] ' + assunto,
+    MailApp.sendEmail(Session.getEffectiveUser().getEmail(), '[Carona Solidária' + (NOME_CIDADE ? ' · ' + NOME_CIDADE : '') + '] ' + assunto,
       texto + '\n\nAbrir a planilha: ' + ss.getUrl());
   } catch (err) {
     console.error('Aviso por e-mail falhou: ' + err);

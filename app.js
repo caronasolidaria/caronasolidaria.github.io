@@ -48,6 +48,7 @@
     if (d.length <= 10) return '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6);
     return '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7);
   }
+  function exemploTel() { return '(' + (C.DDD || '84') + ') 99999-9999'; }
   function plural(n, um, varios) { return n + ' ' + (n === 1 ? um : varios); }
   function valor(form, nome) { return (form.querySelector('[name="' + nome + '"]:checked') || {}).value; }
   function cor(nome) { return getComputedStyle(document.documentElement).getPropertyValue(nome).trim(); }
@@ -380,7 +381,7 @@
     aoEscolher: function (nome) { if (nome) $('#p-local').value = nome; localEscolhido = null; },
   });
 
-  // Locais de votação oficiais do TSE (2º turno 2026, Grande Natal), em locais-votacao.json.
+  // Locais de votação oficiais do TSE (2º turno 2026, região metropolitana), em locais-votacao.json.
   var locais = null, localEscolhido = null, esperaSugestao = null;
   function normalizar(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
   function carregarLocais() {
@@ -456,7 +457,7 @@
     validar: function (passo, f) {
       if (passo === 'para-quem' && !valor(f, 'para')) return 'Toque em uma das opções.';
       if (passo === 'nome' && !f.nome.value.trim()) return 'Escreva o nome de quem vai votar.';
-      if (passo === 'whatsapp' && !telValido(f.whatsapp.value)) return 'Confira o WhatsApp: precisa ter o DDD e o número. Exemplo: (84) 99999-9999';
+      if (passo === 'whatsapp' && !telValido(f.whatsapp.value)) return 'Confira o WhatsApp: precisa ter o DDD e o número. Exemplo: ' + exemploTel();
       if (passo === 'endereco' && !f.regiao.value.trim()) return 'Escreva a rua e o bairro.';
       if (passo === 'endereco' && !f.numero.value.trim()) return 'Escreva o número da casa. Se não tiver, escreva s/n.';
       if (passo === 'escola' && !f.local_votacao.value.trim()) return 'Escreva o nome da escola onde vota. Se não souber, veja no título de eleitor.';
@@ -577,7 +578,7 @@
     sair: function () { if (lembrar('perfil')) telaMotorista(); else so('m-escolha'); },
     validar: function (passo, f) {
       if (passo === 'nome' && !f.nome.value.trim()) return 'Escreva o seu nome.';
-      if (passo === 'whatsapp' && !telValido(f.whatsapp.value)) return 'Confira o WhatsApp: precisa ter o DDD e o número. Exemplo: (84) 99999-9999';
+      if (passo === 'whatsapp' && !telValido(f.whatsapp.value)) return 'Confira o WhatsApp: precisa ter o DDD e o número. Exemplo: ' + exemploTel();
       if (passo === 'carro' && !f.carro.value.trim()) return 'Escreva o modelo e a cor do carro.';
       if (passo === 'carro' && !valor(f, 'lugares')) return 'Toque em quantas pessoas cabem no carro.';
       if (passo === 'termo' && !f.compromisso.checked) return 'Para continuar, marque que aceita o termo.';
@@ -809,6 +810,10 @@
   // ---------- início ----------
 
   $('#data').textContent = [C.BAIRRO, C.DATA].filter(Boolean).join(' · ');
+  // Textos que mudam de cidade para cidade (config.js).
+  $$('input[type=tel]').forEach(function (i) { if (!i.placeholder) i.placeholder = exemploTel(); });
+  $$('.regiao-titulo').forEach(function (s) { s.textContent = C.REGIAO_TITULO || 'região'; });
+  $('#exemplos-locais').textContent = C.EXEMPLOS_LOCAIS || 'nome da escola';
   $$('.apagar').forEach(function (s) { s.textContent = C.APAGAR_ATE || 'o fim da eleição'; });
   if (C.CONTATO) {
     // O número não aparece na tela: só um botão que abre a conversa.
