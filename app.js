@@ -808,11 +808,12 @@
   $('#data').textContent = [C.BAIRRO, C.DATA].filter(Boolean).join(' · ');
   $$('.apagar').forEach(function (s) { s.textContent = C.APAGAR_ATE || 'o fim da eleição'; });
   if (C.CONTATO) {
-    var quem = C.CONTATO_NOME ? C.CONTATO_NOME + ', da organização,' : 'a organização';
+    // O número não aparece na tela: só um botão que abre a conversa.
+    var rotulo = '💬 Falar com ' + (C.CONTATO_NOME || 'a organização') + ' no WhatsApp';
     $$('.ajuda-contato:not([data-sempre])').forEach(function (caixa) {
       caixa.append(
-        (caixa.dataset.texto || '📞 Precisa de ajuda ou prefere que alguém preencha por você? Chame ' + quem + ' no WhatsApp:') + ' ',
-        el('a', { href: 'https://wa.me/55' + digitos(C.CONTATO), target: '_blank', rel: 'noopener', text: telBonito(C.CONTATO) })
+        el('p', { style: 'margin:0 0 10px', text: caixa.dataset.texto || '📞 Precisa de ajuda ou prefere que alguém preencha por você?' }),
+        el('a', { class: 'btn sec', href: 'https://wa.me/55' + digitos(C.CONTATO), target: '_blank', rel: 'noopener', text: rotulo })
       );
     });
   }
