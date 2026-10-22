@@ -4,8 +4,13 @@ window.CONFIG = {
   SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwFJdQjVZwIleXElcSBXwQJnPVPpukVWxAEpFb1msUKcoQdhZUINZsEe-AENsEBtJe1Vw/exec',
   // Nome do bairro ou da comunidade, aparece no topo.
   BAIRRO: 'Vila de Ponta Negra',
-  // Cidade, usada para procurar endereços no mapa.
+  // Cidade, usada nos links de rota quando o ponto não foi marcado no mapa.
   CIDADE: 'Natal, RN',
+  // Área onde a busca de endereços e escolas procura: oeste, norte, leste, sul.
+  // Grande Natal: Natal, Parnamirim, São Gonçalo do Amarante, Macaíba, Extremoz,
+  // Ceará-Mirim, São José de Mipibu e Nísia Floresta.
+  REGIAO: [-35.65, -5.45, -34.95, -6.25],
+  REGIAO_NOME: 'na Grande Natal',
   // Centro e zoom iniciais do mapa (latitude, longitude). Pegue no openstreetmap.org.
   CENTRO: [-5.8883, -35.1691],
   ZOOM: 15,

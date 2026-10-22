@@ -29,8 +29,9 @@
     --combinado: #3f7d3f;
     --radius: 14px;
   }
+  /* Tema escuro: segue o aparelho, a menos que a pessoa escolha no botão ☀️/🌙. */
   @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
       --bg: #151515;
       --surface: #202020;
       --text: #f3f3f3;
@@ -47,6 +48,23 @@
       --err-bg: #3a2220;
       --err-line: #a0544b;
     }
+  }
+  :root[data-theme="dark"] {
+      --bg: #151515;
+      --surface: #202020;
+      --text: #f3f3f3;
+      --muted: #c4c4c4;
+      --line: #444444;
+      --primary: #f3f3f3;
+      --primary-text: #151515;
+      --sel-bg: #2d2a24;
+      --foco: #7fb0ff;
+      --ok-bg: #1d2e1d;
+      --ok-line: #4f8a4f;
+      --warn-bg: #33291a;
+      --warn-line: #8a6d32;
+      --err-bg: #3a2220;
+      --err-line: #a0544b;
   }
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; font-size: 20px; }
@@ -151,8 +169,13 @@
   .nav-passos .btn { white-space: nowrap; }
   .opcional { font-size: 0.9rem; color: var(--muted); margin-top: -6px; }
   dl.resumo { margin: 0 0 16px; }
-  dl.resumo dt { font-weight: 700; margin-top: 10px; font-size: 0.9rem; color: var(--muted); }
+  dl.resumo .item { padding: 12px 0; border-bottom: 2px solid var(--line); }
+  dl.resumo .item:first-child { padding-top: 0; }
+  dl.resumo dt { font-weight: 700; font-size: 0.9rem; color: var(--muted); }
   dl.resumo dd { margin: 0; font-size: 1.05rem; }
+  .sugestoes { display: grid; gap: 10px; margin: 12px 0; }
+  .sugestoes .opcao-card { width: 100%; text-align: left; font: inherit; font-weight: 700; color: inherit; }
+  .topo { flex-wrap: wrap; }
 
   /* mapa */
   .mapa { height: 340px; border-radius: var(--radius); border: 2px solid var(--line); z-index: 0; background: var(--sel-bg); }
@@ -193,6 +216,7 @@
       <div class="fonte" role="group" aria-label="Tamanho da letra">
         <button type="button" id="fonte-menos" aria-label="Diminuir a letra">A−</button>
         <button type="button" id="fonte-mais" aria-label="Aumentar a letra">A+</button>
+        <button type="button" id="tema" aria-label="Trocar entre tema claro e escuro"></button>
       </div>
     </div>
     <p class="data" id="data"></p>
@@ -280,9 +304,10 @@
 
       <div class="passo" data-step="escola" hidden>
         <h2 tabindex="-1">Onde vota?</h2>
-        <label class="campo" for="p-local">Nome da escola ou do local de votação <span class="dica">Ex.: Escola Estadual Ponta Negra</span></label>
-        <input id="p-local" name="local_votacao" type="text" maxlength="120">
-        <p class="opcional" style="margin-top:8px">Depois toque em <strong>Procurar a escola no mapa</strong>, para o motorista saber aonde ir.</p>
+        <label class="campo" for="p-local">Comece a digitar o nome do local <span class="dica">Ex.: Nassau, Jerônimo, Josefa Botelho</span></label>
+        <input id="p-local" name="local_votacao" type="text" maxlength="200" autocomplete="off">
+        <div id="sugestoes" class="sugestoes" aria-live="polite"></div>
+        <p class="opcional" style="margin-top:12px">A lista é a oficial do TSE para a Grande Natal. Se o seu local não aparecer, use o botão abaixo para procurar no mapa.</p>
         <div class="seletor" id="seletor-escola"></div>
         <div class="ajuda-contato" data-sempre>
           <strong>Não sabe onde vota?</strong> Veja no aplicativo <em>e-Título</em>, em "Onde votar", ou no

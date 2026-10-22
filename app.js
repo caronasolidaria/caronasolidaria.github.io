@@ -175,12 +175,26 @@
       lista.replaceChildren();
       s.mostrar();
       var c = C.CENTRO, d = 0.2;
-      fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=br&accept-language=pt-BR' +
-        '&limit=' + (opts.lista ? 5 : 1) + '&viewbox=' + [c[1] - d, c[0] + d, c[1] + d, c[0] - d].join(',') + '&bounded=1' +
-        '&q=' + encodeURIComponent(q))
-        .then(function (r) { return r.json(); })
+      // Área da busca: oeste, norte, leste, sul. Sem REGIAO no config, ~20 km em volta do centro.
+      var area = C.REGIAO || [c[1] - d, c[0] + d, c[1] + d, c[0] - d];
+      function consultar(texto) {
+        return fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=br&accept-language=pt-BR' +
+          '&limit=' + (opts.lista ? 5 : 1) + '&viewbox=' + area.join(',') + '&bounded=1' +
+          '&q=' + encodeURIComponent(texto)).then(function (r) { return r.json(); });
+      }
+      // O OpenStreetMap tem poucos números de casa no Brasil: sem resultado, tenta só o nome da rua.
+      var semNumero = q.split(',')[0].replace(/\s+(n[º°o.]*\s*)?\d+\w*$/i, '').trim();
+      consultar(q)
         .then(function (res) {
-          if (!res.length) { s.status.textContent = 'Não achei. Confira o nome ou toque no mapa, no lugar certo.'; return; }
+          if (res.length || !semNumero || semNumero === q) return res;
+          return new Promise(function (ok) { setTimeout(ok, 1100); }).then(function () { return consultar(semNumero); });
+        })
+        .then(function (res) {
+          if (!res.length) {
+            s.status.textContent = 'Não achei' + (C.REGIAO_NOME ? ' ' + C.REGIAO_NOME : '') +
+              '. Confira o nome ou toque no mapa, no lugar certo.';
+            return;
+          }
           if (!opts.lista || res.length === 1) return escolher(res[0]);
           s.status.textContent = 'Se não for nenhum desses, toque no mapa, no lugar certo.';
           lista.appendChild(el('p', { class: 'seletor-status', style: 'margin:0', text: 'Achei estes. Toque no certo:' }));
@@ -189,7 +203,7 @@
             var b = el('button', { type: 'button', class: 'opcao-card', style: 'text-align:left;width:100%;font:inherit;font-weight:700;color:inherit' }, [
               el('span', { class: 'ico', 'aria-hidden': 'true', text: s.emoji }),
               el('span', {}, [r.name || r.display_name.split(',')[0],
-                el('small', { text: [a.road, a.suburb || a.neighbourhood].filter(Boolean).join(', ') })]),
+                el('small', { text: [a.road, a.suburb || a.neighbourhood, a.city || a.town || a.village].filter(Boolean).join(', ') })]),
             ]);
             b.addEventListener('click', function () { escolher(r); });
             lista.appendChild(b);
@@ -282,6 +296,8 @@
         if (i < passos.length - 1) avancar();
       }
     });
+    // Ao corrigir (marcar, escolher), o aviso de erro some.
+    form.addEventListener('change', function () { mensagem(erroBox, '', ''); });
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       if (i < passos.length - 1) return avancar();
@@ -354,19 +370,77 @@
   var selPedir = new Seletor($('#seletor-pedir'), '🏠', function (txt) {
     var f = $('#p-regiao');
     if (!f.value.trim()) f.value = txt;
-  });
+  }, { lista: true });
 
   var selEscola = new Seletor($('#seletor-escola'), '🗳️', null, {
-    campo: $('#p-local'), lista: true, semLocalizacao: true, textoBusca: '🔎 Procurar a escola no mapa',
-    aoEscolher: function (nome) { if (nome) $('#p-local').value = nome; },
+    campo: $('#p-local'), lista: true, semLocalizacao: true, textoBusca: '🔎 Não achou na lista? Procurar no mapa',
+    aoEscolher: function (nome) { if (nome) $('#p-local').value = nome; localEscolhido = null; },
   });
+
+  // Locais de votação oficiais do TSE (2º turno 2026, Grande Natal), em locais-votacao.json.
+  var locais = null, localEscolhido = null, esperaSugestao = null;
+  function normalizar(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+  function carregarLocais() {
+    if (locais) return Promise.resolve(locais);
+    return fetch('locais-votacao.json').then(function (r) { return r.json(); }).then(function (lista) {
+      locais = lista.map(function (l) { l.busca = normalizar([l.n, l.b, l.m, l.e].join(' ')); return l; });
+      return locais;
+    }).catch(function () { return []; });
+  }
+  function textoLocal(l) { return l.n + ' (' + [l.e, l.b, l.m].filter(Boolean).join(', ') + ')'; }
+  function sugerir() {
+    var caixa = $('#sugestoes');
+    var termos = normalizar($('#p-local').value).split(/\s+/).filter(function (t) { return t.length > 1; });
+    caixa.replaceChildren();
+    if (localEscolhido || !termos.length || !locais) return;
+    var achados = locais.filter(function (l) {
+      return termos.every(function (t) { return l.busca.indexOf(t) >= 0; });
+    }).sort(function (a, b) {
+      return distanciaKm(C.CENTRO, [a.lat, a.lng]) - distanciaKm(C.CENTRO, [b.lat, b.lng]);
+    });
+    if (!achados.length) {
+      caixa.appendChild(el('p', { class: 'dica', text: 'Não achei na lista oficial. Confira o nome ou procure no mapa, abaixo.' }));
+      return;
+    }
+    caixa.appendChild(el('p', { class: 'seletor-status', style: 'margin:0', text: 'Toque no seu local de votação:' }));
+    achados.slice(0, 6).forEach(function (l) {
+      var b = el('button', { type: 'button', class: 'opcao-card' }, [
+        el('span', { class: 'ico', 'aria-hidden': 'true', text: '🗳️' }),
+        el('span', {}, [l.n, el('small', { text: [l.e, l.b, l.m].filter(Boolean).join(' · ') })]),
+      ]);
+      b.addEventListener('click', function () { escolherLocal(l); });
+      caixa.appendChild(b);
+    });
+    if (achados.length > 6) {
+      caixa.appendChild(el('p', { class: 'dica', text: 'Há mais ' + (achados.length - 6) + '. Digite mais do nome para achar o seu.' }));
+    }
+  }
+  function escolherLocal(l) {
+    localEscolhido = l;
+    $('#p-local').value = l.n;
+    $('#sugestoes').replaceChildren(el('div', { class: 'msg ok', text: '✅ ' + textoLocal(l) }));
+    if (l.lat != null) selEscola.marcar(l.lat, l.lng, true, false);
+  }
+  $('#p-local').addEventListener('input', function () {
+    if (localEscolhido) { localEscolhido = null; selEscola.limpar(); }
+    clearTimeout(esperaSugestao);
+    esperaSugestao = setTimeout(sugerir, 150);
+  });
+
+  /** Lista de pares [rótulo, valor] como linhas separadas. */
+  function preencherResumo(dl, pares) {
+    dl.replaceChildren();
+    pares.filter(function (x) { return x[1]; }).forEach(function (x) {
+      dl.appendChild(el('div', { class: 'item' }, [el('dt', { text: x[0] }), el('dd', { text: x[1] })]));
+    });
+  }
 
   function dadosPedido(f) {
     var outra = valor(f, 'para') === 'outra';
     return {
       nome: f.nome.value, whatsapp: f.whatsapp.value, quem_cadastra: outra ? f.quem_cadastra.value : '',
       regiao: f.regiao.value, endereco: f.regiao.value.trim() + ', ' + f.numero.value.trim(), referencia: f.referencia.value,
-      local_votacao: f.local_votacao.value, turno: valor(f, 'turno'), volta: valor(f, 'volta') === 'sim',
+      local_votacao: localEscolhido ? textoLocal(localEscolhido) : f.local_votacao.value, turno: valor(f, 'turno'), volta: valor(f, 'volta') === 'sim',
       cadeira_rodas: f.cadeira_rodas.checked, andador: f.andador.checked,
       ajuda_entrar: f.ajuda_entrar.checked, acompanhante: f.acompanhante.checked,
       observacoes: f.observacoes.value, consentimento: f.consentimento.checked,
@@ -393,7 +467,7 @@
         $('#p-bloco-quem').hidden = !outra;
       }
       if (passo === 'mapa') selPedir.mostrar();
-      if (passo === 'escola') selEscola.mostrar();
+      if (passo === 'escola') { selEscola.mostrar(); carregarLocais().then(sugerir); }
       if (passo === 'conferir') {
         var d = dadosPedido(f);
         var ajudas = Object.keys(AJUDAS).filter(function (k) { return d[k]; }).map(function (k) { return AJUDAS[k]; });
@@ -412,11 +486,8 @@
           ['Observações', d.observacoes],
         ];
         var dl = $('#p-resumo');
-        dl.replaceChildren();
-        linhas.filter(function (x) { return x[1]; }).forEach(function (x) {
-          dl.append(el('dt', { text: x[0] }), el('dd', { text: x[1] }));
-        });
-        dl.append(el('dd', { class: 'dica', text: 'Para corrigir algo, toque em Voltar.' }));
+        preencherResumo(dl, linhas);
+        dl.appendChild(el('p', { class: 'dica', style: 'margin:12px 0 0', text: 'Para corrigir algo, toque em Voltar.' }));
       }
     },
     enviar: function (f) {
@@ -424,6 +495,8 @@
         f.reset();
         selPedir.limpar();
         selEscola.limpar();
+        localEscolhido = null;
+        $('#sugestoes').replaceChildren();
         wPedir.ir(0);
         f.hidden = true;
         $('#ok-id').textContent = r.id;
@@ -438,7 +511,7 @@
   var selOferecer = new Seletor($('#seletor-oferecer'), '🚗', function (txt) {
     var f = $('#o-regiao');
     if (!f.value.trim()) f.value = txt;
-  });
+  }, { lista: true });
 
   function so(id) {
     ['f-codigo', 'm-escolha', 'f-oferecer', 'painel'].forEach(function (x) { $('#' + x).hidden = x !== id; });
@@ -688,7 +761,7 @@
       ['Observações', c.observacoes],
     ].filter(function (x) { return x[1]; });
     var dl = el('dl', { class: 'resumo' });
-    campos.forEach(function (x) { dl.append(el('dt', { text: x[0] }), el('dd', { text: x[1] })); });
+    preencherResumo(dl, campos);
 
     var perfil = lembrar('perfil') || {};
     var texto = 'Olá, ' + c.nome + '! Sou ' + (perfil.nome || c.motorista_nome) + ', da Carona Solidária. ' +
@@ -741,6 +814,24 @@
   $('#fonte-menos').addEventListener('click', function () { fonte = Math.max(0, fonte - 1); aplicarFonte(); });
   $('#fonte-mais').addEventListener('click', function () { fonte = Math.min(FONTES.length - 1, fonte + 1); aplicarFonte(); });
   aplicarFonte();
+
+  // Tema claro/escuro: segue o aparelho até a pessoa escolher.
+  var escuroNoAparelho = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
+  function aplicarTema() {
+    var tema = lembrar('tema');
+    if (tema) document.documentElement.dataset.theme = tema;
+    else delete document.documentElement.dataset.theme;
+    var escuro = tema ? tema === 'dark' : escuroNoAparelho;
+    $('#tema').textContent = escuro ? '☀️' : '🌙';
+    $('#tema').title = escuro ? 'Usar tema claro' : 'Usar tema escuro';
+    $('#tema').setAttribute('aria-label', $('#tema').title);
+  }
+  $('#tema').addEventListener('click', function () {
+    var escuro = lembrar('tema') ? lembrar('tema') === 'dark' : escuroNoAparelho;
+    guardar('tema', escuro ? 'light' : 'dark');
+    aplicarTema();
+  });
+  aplicarTema();
 
   window.addEventListener('hashchange', mostrar);
   mostrar();
