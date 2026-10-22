@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Carona Solidária">
+  <rect width="100" height="100" rx="22" fill="#222222"/>
+  <g transform="translate(0 6)">
+    <rect x="39" y="5" width="26" height="22" rx="5" fill="#7A2E3A"/>
+    <path d="M45.5 16 L50 20.5 L58.5 11.5" fill="none" stroke="#F6F4EF" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M14 62 Q14 52 24 50 L32 49 L40 38 Q43 34 48 34 L62 34 Q67 34 70 38 L77 49 L84 51 Q90 53 90 60 L90 66 Q90 70 86 70 L18 70 Q14 70 14 66 Z" fill="#F6F4EF"/>
+    <path d="M43 41 Q45 38.5 48 38.5 L54 38.5 L54 48 L37.5 48 Z" fill="#222222"/>
+    <path d="M58 38.5 L62 38.5 Q65 38.5 67 41 L72 48 L58 48 Z" fill="#222222"/>
+    <circle cx="31" cy="70" r="8.5" fill="#F6F4EF" stroke="#222222" stroke-width="3.5"/>
+    <circle cx="73" cy="70" r="8.5" fill="#F6F4EF" stroke="#222222" stroke-width="3.5"/>
+  </g>
+</svg>

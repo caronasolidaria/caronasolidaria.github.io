@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Carona Solidária</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#222222">
+<meta name="apple-mobile-web-app-title" content="Carona Solidária">
 <meta name="description" content="Vizinhos com carro levando vizinhos com dificuldade de locomoção até o local de votação. Gratuito e apartidário.">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
@@ -85,7 +90,8 @@
 
   /* topo */
   .topo { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0 6px; }
-  .marca { font-weight: 800; font-size: 1.1rem; text-decoration: none; }
+  .marca { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.1rem; text-decoration: none; }
+  .marca img { width: 40px; height: 40px; flex: none; }
   .fonte { display: flex; gap: 6px; }
   .fonte button {
     min-width: 52px; min-height: 48px; border: 2px solid var(--line); border-radius: 10px;
@@ -212,7 +218,7 @@
 <main>
   <header>
     <div class="topo">
-      <a class="marca" href="#">🤝 Carona Solidária</a>
+      <a class="marca" href="#"><img src="logo.svg" alt="" width="40" height="40">Carona Solidária</a>
       <div class="fonte" role="group" aria-label="Tamanho da letra">
         <button type="button" id="fonte-menos" aria-label="Diminuir a letra">A−</button>
         <button type="button" id="fonte-mais" aria-label="Aumentar a letra">A+</button>
