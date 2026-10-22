@@ -53,6 +53,9 @@ const MAX_CARONAS_POR_MOTORISTA = 4;
 const MAX_PEDIDOS_ABERTOS_POR_WHATSAPP = 2;
 const MAX_PEDIDOS_POR_HORA = 60;
 const MAX_CADASTROS_POR_HORA = 30;
+// Avisos por e-mail para a dona/o dono da planilha. Sem nome, telefone ou endereço:
+// o e-mail fica guardado depois que os dados forem apagados.
+const AVISAR_POR_EMAIL = true;
 
 /** Rode pelo editor depois de colar uma versão nova: cria abas, cabeçalhos, menus e o agendamento. */
 function setup() {
@@ -147,6 +150,8 @@ function pedir(d) {
     p.criado_em = agora();
     p.status = 'aberto';
     aba.appendRow(COLUNAS.map(c => celula(c, p[c])));
+    avisar('Novo pedido de carona: ' + p.id,
+      'Chegou o pedido ' + p.id + ' (' + (TURNOS_TEXTO[p.turno] || '') + '). Ele já aparece para os motoristas aprovados.');
     return { ok: true, id: p.id };
   });
 }
@@ -184,6 +189,8 @@ function oferecer(d) {
       m.status = 'pendente';
       m.token = Utilities.getUuid().replace(/-/g, '');
       aba.appendRow(COLUNAS_MOT.map(c => celula(c, m[c])));
+      avisar('Motorista para aprovar: ' + m.id,
+        'O motorista ' + m.id + ' se cadastrou e está esperando a sua aprovação. Na aba Motoristas, confira a pessoa e mude o status para "ativo".');
     }
     return { ok: true, motorista: m };
   });
@@ -293,6 +300,8 @@ function liberar(id, mot) {
       aba.getRange(l._linha, COLUNAS.indexOf(c) + 1).setValue('');
     });
     aba.getRange(l._linha, COLUNAS.indexOf('status') + 1).setValue('aberto');
+    avisar('Carona devolvida: ' + l.id,
+      'O motorista ' + mot.id + ' não pode mais levar o pedido ' + l.id + ', que voltou para a lista. Se estiver perto do dia, vale procurar outro motorista.');
     return { ok: true };
   });
 }
@@ -330,6 +339,20 @@ function limitar(chave, max) {
   const n = Number(cache.get(k) || 0) + 1;
   if (n > max) throw new Error('Muitos envios agora. Tente de novo daqui a pouco.');
   cache.put(k, String(n), 3600);
+}
+
+const TURNOS_TEXTO = { manha: 'de manhã', tarde: 'à tarde', 'tanto-faz': 'qualquer horário' };
+
+/** Manda um aviso para a conta dona da planilha. Uma falha no e-mail nunca derruba o pedido. */
+function avisar(assunto, texto) {
+  if (!AVISAR_POR_EMAIL) return;
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    MailApp.sendEmail(Session.getEffectiveUser().getEmail(), '[Carona Solidária] ' + assunto,
+      texto + '\n\nAbrir a planilha: ' + ss.getUrl());
+  } catch (err) {
+    console.error('Aviso por e-mail falhou: ' + err);
+  }
 }
 
 function comTrava(fn) {

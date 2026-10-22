@@ -42,6 +42,10 @@ Para a segurança de todos, **os dados são apagados sozinhos em 26/10/2026, às
 
 O Google Planilhas guarda um **histórico de versões**. Para apagar de vez, depois do prazo, exclua o arquivo da planilha e esvazie a lixeira do Google Drive.
 
+## Avisos por e-mail
+
+O script manda um e-mail para a conta dona da planilha quando chega um **pedido novo**, quando um **motorista novo** espera aprovação e quando uma **carona é devolvida** para a lista. Os e-mails não levam nome, telefone nem endereço: só o número do pedido ou do motorista e o link da planilha. Para desligar, mude `AVISAR_POR_EMAIL` para `false` no `Code.gs`.
+
 ## Aprovação dos motoristas (organização)
 
 1. Na aba `Motoristas`, cada cadastro novo chega com `status` = `pendente`.
