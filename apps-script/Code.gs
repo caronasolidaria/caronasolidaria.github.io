@@ -12,6 +12,9 @@
 // Vazio = qualquer pessoa com o link pode se cadastrar como motorista.
 const CODIGO_MOTORISTAS = '';
 
+// Para a segurança de todos, os dados são apagados sozinhos neste momento (horário de Natal).
+const APAGAR_EM = new Date('2026-10-26T18:00:00-03:00');
+
 const ABA = 'Pedidos';
 const COLUNAS = [
   'id', 'criado_em', 'status',
@@ -47,6 +50,20 @@ function setup() {
     // Tudo como texto: evita que telefone vire número e que a planilha interprete fórmulas.
     aba.getRange(1, 1, aba.getMaxRows(), cols.length).setNumberFormat('@');
   });
+  // Agenda a exclusão automática (na primeira vez, o Google pede uma permissão a mais).
+  ScriptApp.getProjectTriggers()
+    .filter(t => t.getHandlerFunction() === 'apagarTudo')
+    .forEach(t => ScriptApp.deleteTrigger(t));
+  if (new Date() < APAGAR_EM) ScriptApp.newTrigger('apagarTudo').timeBased().at(APAGAR_EM).create();
+}
+
+/** Apaga todos os pedidos e motoristas, mantendo só os cabeçalhos. */
+function apagarTudo() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  [ABA, ABA_MOT].forEach(nome => {
+    const aba = ss.getSheetByName(nome);
+    if (aba && aba.getLastRow() > 1) aba.deleteRows(2, aba.getLastRow() - 1);
+  });
 }
 
 function doGet() {
@@ -54,6 +71,11 @@ function doGet() {
 }
 
 function doPost(e) {
+  // Garantia extra, caso o agendamento falhe: depois do prazo, apaga e não aceita mais nada.
+  if (new Date() >= APAGAR_EM) {
+    apagarTudo();
+    return json({ ok: false, erro: 'A Carona Solidária foi encerrada e, para a segurança de todos, os dados foram apagados. Obrigado!' });
+  }
   let req;
   try {
     req = JSON.parse(e.postData.contents);
@@ -86,7 +108,7 @@ function pedir(d) {
     endereco: texto(d.endereco, 160, true, 'endereço'),
     referencia: texto(d.referencia, 160, false),
     regiao: texto(d.regiao, 80, true, 'rua ou bairro'),
-    local_votacao: texto(d.local_votacao, 120, true, 'local de votação'),
+    local_votacao: texto(d.local_votacao, 200, true, 'local de votação'),
     turno: TURNOS.indexOf(d.turno) >= 0 ? d.turno : 'tanto-faz',
     volta: simNao(d.volta),
     cadeira_rodas: simNao(d.cadeira_rodas),

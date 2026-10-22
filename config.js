@@ -18,6 +18,6 @@ window.CONFIG = {
   DATA: 'Domingo, 25 de outubro · 2º turno · das 8h às 17h',
   // WhatsApp de quem organiza (DDD + número, só dígitos). Deixe vazio para não exibir.
   CONTATO: '',
-  // Até quando os dados ficam guardados antes de serem apagados.
-  APAGAR_ATE: '31/10/2026',
+  // Quando os dados são apagados (igual a APAGAR_EM no Code.gs).
+  APAGAR_ATE: '26/10/2026, às 18h',
 };
