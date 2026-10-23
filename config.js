@@ -48,7 +48,7 @@ window.CONFIG = {
       // Ipojuca, Itapissuma, Ilha de Itamaracá e Araçoiaba.
       REGIAO: [-35.24, -7.7, -34.78, -8.57],
       REGIAO_NOME: 'no Grande Recife',
-      REGIAO_TITULO: 'região metropolitana do Recife',
+      REGIAO_TITULO: 'Região Metropolitana do Recife',
       DDD: '81',
       EXEMPLOS_LOCAIS: 'Ginásio Pernambucano, UFPE, Nassau',
       AREA_MAPA: [[-8.1552, -35.0186], [-7.929, -34.8515]],
