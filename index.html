@@ -225,8 +225,17 @@
         <button type="button" id="tema" aria-label="Trocar entre tema claro e escuro"></button>
       </div>
     </div>
-    <p class="data" id="data"></p>
+    <p class="data"><span id="data"></span> <a id="trocar-cidade" href="?trocar" hidden>· trocar de cidade</a></p>
   </header>
+
+  <!-- ===================== ESCOLHA DA CIDADE ===================== -->
+  <section id="v-cidade" data-view hidden>
+    <h1>Carona para votar, de vizinho para vizinho</h1>
+    <p>Quem tem carro leva até o local de votação quem tem dificuldade de chegar lá: idosos, pessoas com deficiência ou com problema de locomoção. <strong>De graça e sem partido.</strong></p>
+    <h2>Em qual cidade você está?</h2>
+    <div class="pilha" id="lista-cidades"></div>
+    <p><a href="#avisos">Como funciona e regras importantes</a></p>
+  </section>
 
   <!-- ===================== INÍCIO ===================== -->
   <section id="v-inicio" data-view>
@@ -491,6 +500,7 @@
       <div id="minhas"></div>
       <div id="area-pedidos" hidden>
         <h2>Pedidos esperando motorista</h2>
+        <div class="msg aviso">🔔 <strong>Até domingo, abra esta página de vez em quando:</strong> pedidos novos chegam a toda hora. Com ela aberta, a lista se atualiza sozinha a cada 2 minutos e o celular vibra quando chega pedido novo.</div>
         <div id="mapa-motorista" class="mapa alto" role="img" aria-label="Mapa com os pedidos esperando motorista"></div>
         <div class="legenda" aria-hidden="true"><span>🙋 Pedido (região aproximada)</span><span>🗳️ Local de votação</span><span>🚗 Você</span></div>
         <p class="dica">Toque num 🙋 para ver o pedido na lista.</p>

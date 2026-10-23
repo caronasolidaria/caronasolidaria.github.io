@@ -1,7 +1,14 @@
 (function () {
   'use strict';
 
-  var C = window.CONFIG || {};
+  var CONFIG = window.CONFIG || {};
+  var CIDADES = CONFIG.CIDADES || {};
+  // Guardados separadamente por cidade: cada cidade tem a sua planilha e o seu cadastro.
+  var POR_CIDADE = ['perfil', 'codigo', 'pedeCodigo'];
+  migrarChavesAntigas();
+  var cidade = definirCidade();
+  receberMigracao();
+  var C = Object.assign({}, CONFIG, cidade ? CIDADES[cidade] : {});
   C.CENTRO = C.CENTRO || [-15.79, -47.88];
   C.ZOOM = C.ZOOM || 14;
   var TURNOS = { manha: 'De manhã (8h ao meio-dia)', tarde: 'À tarde (meio-dia às 17h)', 'tanto-faz': 'Qualquer horário' };
@@ -29,14 +36,63 @@
     return e;
   }
 
+  function chaveDe(chave) {
+    return 'carona.' + (POR_CIDADE.indexOf(chave) >= 0 ? cidade + '.' : '') + chave;
+  }
   function guardar(chave, valor) {
-    try { localStorage.setItem('carona.' + chave, JSON.stringify(valor)); } catch (e) { /* sem storage */ }
+    try { localStorage.setItem(chaveDe(chave), JSON.stringify(valor)); } catch (e) { /* sem storage */ }
   }
   function lembrar(chave) {
-    try { return JSON.parse(localStorage.getItem('carona.' + chave)); } catch (e) { return null; }
+    try { return JSON.parse(localStorage.getItem(chaveDe(chave))); } catch (e) { return null; }
   }
   function esquecer(chave) {
-    try { localStorage.removeItem('carona.' + chave); } catch (e) { /* sem storage */ }
+    try { localStorage.removeItem(chaveDe(chave)); } catch (e) { /* sem storage */ }
+  }
+
+  // ---------- cidade ----------
+
+  /** Cidade do link (?cidade=recife) ou a escolhida antes; ?trocar volta para a escolha. */
+  function definirCidade() {
+    var params = new URLSearchParams(location.search);
+    if (params.has('trocar')) {
+      esquecer('cidade');
+      history.replaceState(null, '', location.pathname + location.hash);
+      return null;
+    }
+    var pedida = params.get('cidade');
+    if (pedida && CIDADES[pedida]) { guardar('cidade', pedida); return pedida; }
+    var salva = lembrar('cidade');
+    return salva && CIDADES[salva] ? salva : null;
+  }
+
+  /** Antes das várias cidades, este endereço era só de Natal: o cadastro antigo é de Natal. */
+  function migrarChavesAntigas() {
+    try {
+      POR_CIDADE.forEach(function (k) {
+        var antigo = localStorage.getItem('carona.' + k);
+        if (antigo === null) return;
+        if (localStorage.getItem('carona.natal.' + k) === null) localStorage.setItem('carona.natal.' + k, antigo);
+        localStorage.removeItem('carona.' + k);
+      });
+    } catch (e) { /* sem storage */ }
+  }
+
+  /**
+   * Os sites antigos de Recife e João Pessoa redirecionam para cá trazendo, no "#",
+   * o cadastro de motorista que estava guardado lá (o "#" não sai do aparelho).
+   */
+  function receberMigracao() {
+    if (location.hash.indexOf('#migrar=') !== 0) return;
+    var p = new URLSearchParams(location.hash.slice(1));
+    try {
+      var dados = JSON.parse(decodeURIComponent(escape(atob(p.get('migrar')))));
+      if (cidade) {
+        POR_CIDADE.forEach(function (k) {
+          if (dados[k] != null && lembrar(k) == null) guardar(k, dados[k]);
+        });
+      }
+    } catch (e) { /* link quebrado: segue sem migrar */ }
+    history.replaceState(null, '', location.pathname + location.search + (p.get('ir') ? '#' + p.get('ir') : ''));
   }
 
   function digitos(v) { return String(v || '').replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, ''); }
@@ -320,6 +376,8 @@
   function mostrar() {
     var nome = (location.hash || '#inicio').slice(1);
     var alvo = document.getElementById('v-' + nome) ? nome : 'inicio';
+    // Sem cidade escolhida, só a tela de escolha (as regras e avisos continuam abertos).
+    if (!cidade && alvo !== 'avisos') alvo = 'cidade';
     $$('[data-view]').forEach(function (s) { s.hidden = s.id !== 'v-' + alvo; });
     window.scrollTo(0, 0);
     if (alvo === 'inicio') carregarMapaInicio();
@@ -381,12 +439,12 @@
     aoEscolher: function (nome) { if (nome) $('#p-local').value = nome; localEscolhido = null; },
   });
 
-  // Locais de votação oficiais do TSE (2º turno 2026, região metropolitana), em locais-votacao.json.
+  // Locais de votação oficiais do TSE (2º turno 2026, região metropolitana), no arquivo C.LOCAIS.
   var locais = null, localEscolhido = null, esperaSugestao = null;
   function normalizar(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
   function carregarLocais() {
     if (locais) return Promise.resolve(locais);
-    return fetch('locais-votacao.json').then(function (r) { return r.json(); }).then(function (lista) {
+    return fetch(C.LOCAIS || 'locais-votacao.json').then(function (r) { return r.json(); }).then(function (lista) {
       locais = lista.map(function (l) { l.busca = normalizar([l.n, l.b, l.m, l.e].join(' ')); return l; });
       return locais;
     }).catch(function () { return []; });
@@ -645,6 +703,7 @@
       return api('listar', credenciais()).then(function (lista) {
         mensagem(aviso, '', '');
         $('#area-pedidos').hidden = false;
+        conhecidos = lista.abertos.map(function (p) { return p.id; });
         desenharPedidos(lista);
       });
     }).catch(function (e) {
@@ -659,13 +718,44 @@
     });
   }
 
+  // ---------- pedidos novos enquanto o painel está aberto ----------
+
+  var conhecidos = null;
+  var MINUTOS_ATUALIZAR = 2;
+
+  function podeAtualizarSozinho() {
+    return conhecidos && !$('#v-motorista').hidden && !$('#painel').hidden && !$('#area-pedidos').hidden &&
+      document.visibilityState === 'visible' && !$('#lista .confirmando:not([hidden])');
+  }
+
+  /** Busca a lista de novo em silêncio e avisa (com vibração) se chegou pedido novo. */
+  function verificarNovos() {
+    if (!podeAtualizarSozinho()) return;
+    api('listar', credenciais()).then(function (lista) {
+      if (!podeAtualizarSozinho()) return;
+      var novos = lista.abertos.filter(function (p) { return conhecidos.indexOf(p.id) < 0; });
+      conhecidos = lista.abertos.map(function (p) { return p.id; });
+      // Sem pedido novo, o mapa fica onde a pessoa deixou.
+      desenharPedidos(lista, novos.length === 0);
+      if (novos.length) {
+        mensagem($('#m-painel'), 'ok', novos.length === 1
+          ? '🔔 Chegou um pedido novo! Veja na lista abaixo.'
+          : '🔔 Chegaram ' + novos.length + ' pedidos novos! Veja na lista abaixo.');
+        try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) { /* sem vibração */ }
+      }
+    }).catch(function () { /* sem conexão agora: tenta na próxima */ });
+  }
+  setInterval(verificarNovos, MINUTOS_ATUALIZAR * 60 * 1000);
+  // Ao voltar para a página (depois de usar outro aplicativo), confere na hora.
+  document.addEventListener('visibilitychange', verificarNovos);
+
   function tags(p) {
     var t = [TURNOS[p.turno] || p.turno, p.volta === 'sim' ? 'Ida e volta' : 'Só ida'];
     Object.keys(AJUDAS).forEach(function (k) { if (p[k] === 'sim') t.push(AJUDAS[k]); });
     return el('div', { class: 'tags' }, t.map(function (x) { return el('span', { class: 'tag', text: x }); }));
   }
 
-  function desenharPedidos(r) {
+  function desenharPedidos(r, manterVista) {
     var perfil = lembrar('perfil') || {};
     var eu = perfil.lat ? [Number(perfil.lat), Number(perfil.lng)] : null;
     var pedidos = r.abertos.map(function (p) {
@@ -712,6 +802,7 @@
         .bindTooltip(el('span', { text: p.local_votacao }));
       pontos.push([p.local_lat, p.local_lng]);
     });
+    if (manterVista) return;
     if (pontos.length > 1) mapaMot.fitBounds(pontos, { padding: [50, 50], maxZoom: 16 });
     else if (pontos.length === 1) mapaMot.setView(pontos[0], 15);
   }
@@ -726,7 +817,7 @@
       tags(p),
     ]);
     var botao = el('button', { class: 'btn', type: 'button', text: '🚗 Eu levo esta pessoa' });
-    var confirma = el('div', { hidden: '' }, [
+    var confirma = el('div', { class: 'confirmando', hidden: '' }, [
       el('p', { text: 'Confirma? Depois disso você recebe o nome, o telefone e o endereço, e o pedido sai da lista.' }),
     ]);
     var sim = el('button', { class: 'btn', type: 'button', text: 'Sim, eu levo' });
@@ -809,7 +900,16 @@
 
   // ---------- início ----------
 
-  $('#data').textContent = [C.BAIRRO, C.DATA].filter(Boolean).join(' · ');
+  $('#data').textContent = [cidade ? C.BAIRRO : '', C.DATA].filter(Boolean).join(' · ');
+  $('#trocar-cidade').hidden = !cidade;
+  // Botões da tela de escolha, um por cidade do config.js.
+  Object.keys(CIDADES).forEach(function (id) {
+    var c = CIDADES[id];
+    $('#lista-cidades').appendChild(el('a', { class: 'btn-grande sec', href: '?cidade=' + id }, [
+      el('span', { class: 'ico', 'aria-hidden': 'true', text: '📍' }),
+      el('span', {}, [el('strong', { text: c.BAIRRO }), el('small', { text: c.REGIAO_TITULO ? c.REGIAO_TITULO + ' · ' + c.UF : c.UF })]),
+    ]));
+  });
   // Textos que mudam de cidade para cidade (config.js).
   $$('input[type=tel]').forEach(function (i) { if (!i.placeholder) i.placeholder = exemploTel(); });
   $$('.regiao-titulo').forEach(function (s) { s.textContent = C.REGIAO_TITULO || 'região'; });
